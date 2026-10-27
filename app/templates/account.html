@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}Your account — infoharness{% endblock %}
+{% block content %}
+<section class="prose">
+  <h1>Your watched sites</h1>
+  <p>Signed in as <strong>{{ me.email }}</strong> · plan: <strong>{{ me.plan|upper }}</strong>
+    {% if me.plan != 'pro' %}· <a href="/pricing">Upgrade</a>{% endif %}</p>
+  {% if msg %}<p class="form-note">{{ msg }}</p>{% endif %}
+  {% if err %}<p class="form-note is-error">{{ err }}</p>{% endif %}
+
+  {% if sites %}
+  <table class="plans">
+    <thead><tr><th>Site</th><th>Grade</th><th>Schedule</th><th>Next scan</th><th></th></tr></thead>
+    <tbody>
+    {% for s in sites %}
+      <tr>
+        <td>{{ s.url }}</td>
+        <td>{% if s.last_scan_id and s.last_status == 'done' %}<a href="/r/{{ s.last_scan_id }}">{{ s.last_grade }}</a>
+            {% elif s.last_status == 'failed' %}failed: {{ s.last_error }}{% else %}pending…{% endif %}</td>
+        <td>{{ intervals.get(s.interval_days, s.interval_days) }}</td>
+        <td>{{ s.next_run_at.strftime('%b %d') }}</td>
+        <td>
+          <form method="post" action="/account/sites/{{ s.id }}/scan" style="display:inline"><button class="secondary" type="submit">Scan now</button></form>
+          <form method="post" action="/account/sites/{{ s.id }}/delete" style="display:inline"><button class="secondary" type="submit">Remove</button></form>
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+
+  {% if sites|length < limit %}
+  <form method="post" action="/account/sites" class="scan-form">
+    <label for="url">Add a docs site ({{ sites|length }} of {{ limit }} used)</label>
+    <div class="field-row">
+      <input id="url" name="url" type="text" inputmode="url" placeholder="help.yourcompany.com" required>
+      <select name="interval" aria-label="How often">
+        {% for d in allowed %}<option value="{{ d }}">{{ intervals[d] }}</option>{% endfor %}
+      </select>
+      <button type="submit">Watch this site</button>
+    </div>
+  </form>
+  {% else %}<p class="form-note">You are using all {{ limit }} watched sites on your plan.</p>{% endif %}
+
+  <form method="post" action="/logout"><button class="secondary" type="submit">Sign out</button></form>
+</section>
+{% endblock %}

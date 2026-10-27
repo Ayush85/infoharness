@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Pricing — infoharness{% endblock %}
+{% block content %}
+<section class="prose">
+  <h1>Pricing</h1>
+  <p class="lede">One-off scans are free. Pay when you want your docs watched for you.</p>
+  <table class="plans">
+    <thead><tr><th></th><th>Free</th><th>Pro</th></tr></thead>
+    <tbody>
+      <tr><th>Price</th><td>$0</td><td>{{ settings().pro_price }} / month</td></tr>
+      <tr><th>One-off scans</th><td>{{ settings().scans_per_ip_per_day }} per day</td><td>{{ settings().scans_per_ip_per_day }} per day</td></tr>
+      <tr><th>Watched sites</th><td>{{ settings().free_sites }}</td><td>{{ settings().pro_sites }}</td></tr>
+      <tr><th>Rescan schedule</th><td>Monthly</td><td>Daily, weekly or monthly</td></tr>
+      <tr><th>Email when new problems appear</th><td>Yes</td><td>Yes</td></tr>
+      <tr><th>Health badge for your README</th><td>Yes</td><td>Yes</td></tr>
+    </tbody>
+  </table>
+  {% if checkout %}
+    <p><a class="button" href="{{ checkout }}">Upgrade to Pro</a></p>
+    <p class="form-note">Use the same email you sign in with, so your plan is applied automatically.</p>
+  {% else %}
+    <h2>Pro is almost ready</h2>
+    {% if joined %}<p class="form-note">Thanks, you're on the list. We'll email you when Pro opens.</p>
+    {% else %}
+    <form method="post" action="/pricing/waitlist" class="scan-form">
+      <label for="wl">Email me when Pro opens</label>
+      <div class="field-row"><input id="wl" name="email" type="text" inputmode="email" placeholder="you@company.com" required>
+      <button type="submit">Join the list</button></div>
+    </form>{% endif %}
+  {% endif %}
+</section>
+{% endblock %}

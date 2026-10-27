@@ -164,3 +164,10 @@ mark { background: linear-gradient(transparent 12%, var(--mark) 12%, var(--mark)
 .prose { max-width: var(--measure); padding: 44px 0; }
 .prose h1 { font-size: 2.4rem; margin-bottom: 18px; }
 .prose h2 { margin: 30px 0 10px; }
+
+/* ---------- accounts, pricing */
+.narrow { max-width: 34rem; }
+table.plans { border-collapse: collapse; width: 100%; margin: 1.2rem 0 1.6rem; font-size: .95rem; }
+table.plans th, table.plans td { text-align: left; padding: .55rem .7rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+table.plans thead th { font-weight: 700; border-bottom: 2px solid var(--ink); }
+select { font: inherit; padding: .55rem .6rem; border: 1px solid var(--line); background: var(--sheet); color: var(--ink); border-radius: 2px; }

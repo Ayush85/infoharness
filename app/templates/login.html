@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Sign in — infoharness{% endblock %}
+{% block content %}
+<section class="prose narrow">
+  <h1>Sign in</h1>
+  <p class="lede">No password. We email you a one-time link. New here? The same link creates your account.</p>
+  <form method="post" action="/login" class="scan-form">
+    <label for="email">Email</label>
+    <div class="field-row">
+      <input id="email" name="email" type="text" inputmode="email" autocomplete="email" placeholder="you@company.com" required>
+      <button type="submit">Email me a link</button>
+    </div>
+    {% if error %}<p class="form-note is-error">{{ error }}</p>{% endif %}
+  </form>
+</section>
+{% endblock %}

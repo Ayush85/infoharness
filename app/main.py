@@ -13,15 +13,16 @@ from pathlib import Path
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
-from fastapi.templating import Jinja2Templates
-from markupsafe import Markup, escape
 from pydantic import BaseModel
 from sqlalchemy import func, select
 
 from app import __version__, config
 from app.crawler import normalize
 from app.db import Issue, Scan, init_engine, session_scope, utcnow
+from app.auth import client_hash
 from app.scoring import TYPE_LABELS
+from app.templating import templates
+from app import accounts
 from app.security import UnsafeURL, check_url_safe, normalize_input_url
 
 logging.basicConfig(level=os.getenv("LOG_LEVEL", "INFO"), format="%(asctime)s %(levelname)s %(name)s: %(message)s")
@@ -34,34 +35,11 @@ async def lifespan(_app: FastAPI):
 
 
 app = FastAPI(title="infoharness", version=__version__, docs_url=None, redoc_url=None, lifespan=lifespan)
+app.include_router(accounts.router)
 app.mount("/static", StaticFiles(directory=BASE / "static"), name="static")
-templates = Jinja2Templates(directory=BASE / "templates")
-templates.env.globals.update(type_labels=TYPE_LABELS, version=__version__)
-
-
-def mark_values(text: str, extra: dict | None) -> Markup:
-    """Escape a quote and highlight the conflicting numbers (e.g. '14' and '30') inside it."""
-    safe = str(escape(text or ""))
-    values = (extra or {}).get("values") or []
-    for v in values:
-        num = str(int(v)) if float(v) == int(v) else str(v)
-        safe = re.sub(rf"(?<![\d.,])({re.escape(num)})(?![\d])", r"<mark>\1</mark>", safe, count=1)
-    return Markup(safe)
-
-
-templates.env.filters["mark_values"] = mark_values
 
 
 # ---------------------------------------------------------------- helpers
-
-def client_hash(request: Request) -> str:
-    ip = request.client.host if request.client else "unknown"
-    if config.settings.trust_proxy:
-        fwd = request.headers.get("x-forwarded-for", "")
-        if fwd:
-            ip = fwd.split(",")[-1].strip() or ip  # rightmost = added by our own reverse proxy
-    return hashlib.sha256(f"{config.settings.ip_hash_salt}:{ip}".encode()).hexdigest()
-
 
 def scan_json(scan: Scan, issues: list[Issue] | None = None) -> dict:
     data = {

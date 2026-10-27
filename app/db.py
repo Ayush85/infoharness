@@ -82,6 +82,64 @@ class Issue(Base):
     scan: Mapped[Scan] = relationship(back_populates="issues")
 
 
+class User(Base):
+    __tablename__ = "users"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    email: Mapped[str] = mapped_column(String(320), unique=True, index=True)
+    plan: Mapped[str] = mapped_column(String(16), default="free")  # free|pro
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+    sites: Mapped[list["Site"]] = relationship(back_populates="user", cascade="all, delete-orphan")
+
+
+class LoginToken(Base):
+    __tablename__ = "login_tokens"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    email: Mapped[str] = mapped_column(String(320), index=True)
+    client_hash: Mapped[str] = mapped_column(String(64), default="", index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, index=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class Site(Base):
+    """A docs site a user wants watched: rescanned on a schedule, emailed when new problems appear."""
+    __tablename__ = "sites"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    url: Mapped[str] = mapped_column(String(2048))
+    interval_days: Mapped[int] = mapped_column(Integer, default=30)
+    next_run_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, index=True)
+    last_scan_id: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    last_status: Mapped[str] = mapped_column(String(16), default="pending")  # pending|done|failed
+    last_grade: Mapped[str | None] = mapped_column(String(2), nullable=True)
+    last_score: Mapped[float | None] = mapped_column(Float, nullable=True)
+    last_error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+    user: Mapped[User] = relationship(back_populates="sites")
+
+
+class SiteScan(Base):
+    """Links a scan to the monitored site that triggered it (kept separate so `scans` never changes shape)."""
+    __tablename__ = "site_scans"
+
+    scan_id: Mapped[str] = mapped_column(String(32), primary_key=True)
+    site_id: Mapped[int] = mapped_column(Integer, index=True)
+
+
+class Waitlist(Base):
+    __tablename__ = "waitlist"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    email: Mapped[str] = mapped_column(String(320), unique=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
 Index("ix_scans_status_created", Scan.status, Scan.created_at)
 
 _engine = None

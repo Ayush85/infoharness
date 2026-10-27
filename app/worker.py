@@ -15,6 +15,7 @@ from sqlalchemy import select
 from app import config
 from app.db import Scan, init_engine, session_scope, utcnow
 from app.pipeline import run_scan
+from app import monitor
 
 log = logging.getLogger("infoharness.worker")
 logging.getLogger("httpx").setLevel(logging.WARNING)
@@ -60,6 +61,10 @@ def run_once() -> bool:
     log.info("scan %s started", scan_id)
     run_scan(scan_id)
     log.info("scan %s finished", scan_id)
+    try:
+        monitor.after_scan(scan_id)
+    except Exception:
+        log.exception("post-scan hook failed for %s", scan_id)
     return True
 
 
@@ -73,8 +78,14 @@ def main() -> None:
     if recovered:
         log.warning("marked %d interrupted scans as failed", recovered)
     log.info("worker ready (llm=%s, embeddings=%s)", config.settings.llm_enabled, config.settings.embeddings_provider)
+    last_sched = 0.0
     while not _stop:
         try:
+            if time.monotonic() - last_sched > 60:
+                last_sched = time.monotonic()
+                queued = monitor.queue_due_scans()
+                if queued:
+                    log.info("queued %d scheduled rescans", queued)
             if not run_once():
                 time.sleep(config.settings.worker_poll_seconds)
         except Exception:

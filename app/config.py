@@ -62,8 +62,31 @@ class Settings:
     llm_max_pairs: int = field(default_factory=lambda: _int("LLM_MAX_PAIRS", 60))
     llm_min_confidence: float = field(default_factory=lambda: _float("LLM_MIN_CONFIDENCE", 0.7))
 
+    # Accounts, email, plans
+    secret_key: str = field(default_factory=lambda: os.getenv("SECRET_KEY", "") or os.getenv("IP_HASH_SALT", "change-me"))
+    mail_from: str = field(default_factory=lambda: os.getenv("MAIL_FROM", "infoharness <hello@infoharness.com>"))
+    resend_api_key: str = field(default_factory=lambda: os.getenv("RESEND_API_KEY", ""))
+    smtp_host: str = field(default_factory=lambda: os.getenv("SMTP_HOST", ""))
+    smtp_port: int = field(default_factory=lambda: _int("SMTP_PORT", 587))
+    smtp_user: str = field(default_factory=lambda: os.getenv("SMTP_USER", ""))
+    smtp_password: str = field(default_factory=lambda: os.getenv("SMTP_PASSWORD", ""))
+    admin_emails: str = field(default_factory=lambda: os.getenv("ADMIN_EMAILS", ""))  # comma separated; always Pro
+    free_sites: int = field(default_factory=lambda: _int("FREE_SITES", 1))
+    pro_sites: int = field(default_factory=lambda: _int("PRO_SITES", 5))
+    checkout_url: str = field(default_factory=lambda: os.getenv("CHECKOUT_URL", ""))  # hosted checkout (Lemon Squeezy / Paddle)
+    ls_webhook_secret: str = field(default_factory=lambda: os.getenv("LS_WEBHOOK_SECRET", ""))
+    pro_price: str = field(default_factory=lambda: os.getenv("PRO_PRICE", "$19"))
+
     # Worker
     worker_poll_seconds: float = field(default_factory=lambda: _float("WORKER_POLL_SECONDS", 2.0))
+
+    @property
+    def admins(self) -> set[str]:
+        return {e.strip().lower() for e in self.admin_emails.split(",") if e.strip()}
+
+    @property
+    def mail_enabled(self) -> bool:
+        return bool(self.resend_api_key or self.smtp_host)
 
     @property
     def llm_enabled(self) -> bool:

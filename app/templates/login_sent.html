@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}Check your email — infoharness{% endblock %}
+{% block content %}
+<section class="prose narrow">
+  <h1>Check your email</h1>
+  <p class="lede">If <strong>{{ email }}</strong> is correct, a sign-in link is on its way. It works once and expires in 15 minutes.</p>
+  {% if mail_off %}<p class="form-note is-error">Email delivery is not configured on this server yet, so no message can be sent.</p>{% endif %}
+  <p><a href="/login">Use a different address</a></p>
+</section>
+{% endblock %}

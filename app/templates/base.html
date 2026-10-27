@@ -15,7 +15,11 @@
 <body>
 <header class="site-head">
   <a class="wordmark" href="/" aria-label="infoharness home">info<span>harness</span></a>
-  <nav><a href="/bot">About the crawler</a></nav>
+  <nav>
+    <a href="/pricing">Pricing</a>
+    {% if me %}<a href="/account">Account</a>{% else %}<a href="/login">Sign in</a>{% endif %}
+    <a href="/bot">About the crawler</a>
+  </nav>
 </header>
 <main id="main">
 {% block content %}{% endblock %}

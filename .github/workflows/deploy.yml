@@ -80,6 +80,38 @@ jobs:
             --exclude '__pycache__/' --exclude '.pytest_cache/' \
             ./ "server:$DEPLOY_PATH/"
 
+      - name: Sync app settings to the server
+        env:
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          SECRET_KEY: ${{ secrets.SECRET_KEY }}
+          LS_WEBHOOK_SECRET: ${{ secrets.LS_WEBHOOK_SECRET }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          MAIL_FROM: ${{ vars.MAIL_FROM }}
+          ADMIN_EMAILS: ${{ vars.ADMIN_EMAILS }}
+          CHECKOUT_URL: ${{ vars.CHECKOUT_URL }}
+          PRO_PRICE: ${{ vars.PRO_PRICE }}
+          LLM_PROVIDER: ${{ vars.LLM_PROVIDER }}
+        run: |
+          # Only non-empty values are written, into the server's .env (never printed). Empty = leave as is.
+          lines=""
+          for k in RESEND_API_KEY SECRET_KEY LS_WEBHOOK_SECRET ANTHROPIC_API_KEY MAIL_FROM ADMIN_EMAILS CHECKOUT_URL PRO_PRICE LLM_PROVIDER; do
+            v="${!k}"; [ -n "$v" ] && lines+="$k=$v"$'\n'
+          done
+          [ -n "$lines" ] || { echo "No extra settings configured."; exit 0; }
+          printf '%s' "$lines" | ssh server "sudo python3 -c '
+          import sys
+          path = \"$DEPLOY_PATH/.env\"
+          new = dict(l.rstrip(\"\\n\").split(\"=\", 1) for l in sys.stdin if \"=\" in l)
+          out, seen = [], set()
+          for line in open(path).read().splitlines():
+              k = line.split(\"=\", 1)[0]
+              if k in new: out.append(k + \"=\" + new[k]); seen.add(k)
+              else: out.append(line)
+          out += [k + \"=\" + v for k, v in new.items() if k not in seen]
+          open(path, \"w\").write(\"\\n\".join(out) + \"\\n\")
+          print(\"updated:\", \", \".join(sorted(new)))
+          '"
+
       - name: Deploy
         run: |
           ssh server "cd '$DEPLOY_PATH' && chmod +x deploy.sh scripts/*.sh && sudo ./deploy.sh '$DOMAIN' '$EMAIL' $EXTRA_ARGS"

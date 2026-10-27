@@ -1,0 +1,208 @@
+"""Login, watched sites, pricing and the payment webhook."""
+from __future__ import annotations
+
+import asyncio
+import hashlib
+import hmac
+import json
+import logging
+from datetime import timedelta
+from urllib.parse import quote
+
+from fastapi import APIRouter, Form, HTTPException, Request
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
+from sqlalchemy import func, select
+
+from app import config
+from app.auth import (COOKIE, SESSION_DAYS, clean_email, client_hash, current_user, issue_token, make_session,
+                      read_session, redeem_token, site_limit)
+from app.crawler import normalize
+from app.db import Scan, Site, SiteScan, User, Waitlist, session_scope, utcnow
+from app.mailer import send_email
+from app.security import UnsafeURL, check_url_safe, normalize_input_url
+from app.templating import templates
+
+log = logging.getLogger("infoharness.accounts")
+router = APIRouter()
+INTERVALS = {1: "daily", 7: "weekly", 30: "monthly"}
+
+
+def _page(request: Request, name: str, ctx: dict | None = None, status: int = 200):
+    return templates.TemplateResponse(request, name, ctx or {}, status_code=status)
+
+
+def _redirect(url: str, cookie: str | None = None, clear: bool = False) -> RedirectResponse:
+    r = RedirectResponse(url, status_code=303)
+    secure = config.settings.public_base_url.startswith("https")
+    if cookie:
+        r.set_cookie(COOKIE, cookie, max_age=SESSION_DAYS * 86400, httponly=True, samesite="lax", secure=secure)
+    if clear:
+        r.delete_cookie(COOKIE)
+    return r
+
+
+# ---------------------------------------------------------------- login
+@router.get("/login", response_class=HTMLResponse)
+def login_page(request: Request):
+    if current_user(request):
+        return _redirect("/account")
+    return _page(request, "login.html")
+
+
+@router.post("/login", response_class=HTMLResponse)
+def login_submit(request: Request, email: str = Form("")):
+    e = clean_email(email)
+    if not e:
+        return _page(request, "login.html", {"error": "Enter a valid email address."}, 400)
+    token = issue_token(e, client_hash(request))
+    if token is None:
+        return _page(request, "login.html", {"error": "Too many login emails requested. Try again in an hour."}, 429)
+    link = f"{config.settings.public_base_url}/login/verify?token={quote(token)}"
+    sent = send_email(e, "Your infoharness sign-in link",
+                      f"Click to sign in (valid for 15 minutes, works once):\n\n{link}\n\n"
+                      "If you didn't ask for this, ignore this email.")
+    # Same answer whether or not the address exists or the mail went out, so the form can't be used to probe accounts.
+    return _page(request, "login_sent.html", {"email": e, "mail_off": not config.settings.mail_enabled and not sent})
+
+
+@router.get("/login/verify", response_class=HTMLResponse)
+def verify_page(request: Request, token: str = ""):
+    # A confirm button, not auto-login: mail scanners that prefetch links must not burn the one-time token.
+    return _page(request, "verify.html", {"token": token})
+
+
+@router.post("/login/verify")
+def verify_submit(request: Request, token: str = Form("")):
+    uid = redeem_token(token)
+    if uid is None:
+        return _page(request, "login.html", {"error": "That sign-in link has expired or was already used. Request a new one."}, 400)
+    return _redirect("/account", make_session(uid))
+
+
+@router.post("/logout")
+def logout():
+    return _redirect("/", clear=True)
+
+
+# ---------------------------------------------------------------- account
+@router.get("/account", response_class=HTMLResponse)
+def account(request: Request, msg: str = "", err: str = ""):
+    me = current_user(request)
+    if not me:
+        return _redirect("/login")
+    with session_scope() as s:
+        sites = list(s.scalars(select(Site).where(Site.user_id == me["id"]).order_by(Site.id)))
+    limit = site_limit(me["plan"])
+    return _page(request, "account.html", {"sites": sites, "limit": limit, "intervals": INTERVALS,
+                                           "allowed": [30] if me["plan"] != "pro" else [1, 7, 30],
+                                           "msg": msg, "err": err, "now": utcnow()})
+
+
+@router.post("/account/sites")
+async def add_site(request: Request, url: str = Form(""), interval: int = Form(30)):
+    me = current_user(request)
+    if not me:
+        return _redirect("/login")
+    try:
+        norm = normalize(normalize_input_url(url))
+        await asyncio.to_thread(check_url_safe, norm)
+    except UnsafeURL as e:
+        return _redirect(f"/account?err={quote(str(e))}")
+    if interval not in INTERVALS or (me["plan"] != "pro" and interval != 30):
+        interval = 30
+    with session_scope() as s:
+        have = s.scalar(select(func.count()).select_from(Site).where(Site.user_id == me["id"]))
+        if have >= site_limit(me["plan"]):
+            return _redirect(f"/account?err={quote('You have reached your site limit. Upgrade to watch more sites.')}")
+        if s.scalar(select(Site.id).where(Site.user_id == me["id"], Site.url == norm)):
+            return _redirect(f"/account?err={quote('You already watch that site.')}")
+        s.add(Site(user_id=me["id"], url=norm, interval_days=interval))  # next_run_at = now: first scan starts at once
+    return _redirect(f"/account?msg={quote('Site added. The first scan starts in a minute and we will email you the result.')}")
+
+
+@router.post("/account/sites/{site_id}/delete")
+def delete_site(request: Request, site_id: int):
+    me = current_user(request)
+    if not me:
+        return _redirect("/login")
+    with session_scope() as s:
+        site = s.get(Site, site_id)
+        if site and site.user_id == me["id"]:
+            s.delete(site)
+    return _redirect("/account")
+
+
+@router.post("/account/sites/{site_id}/scan")
+def scan_site_now(request: Request, site_id: int):
+    me = current_user(request)
+    if not me:
+        return _redirect("/login")
+    with session_scope() as s:
+        site = s.get(Site, site_id)
+        if site and site.user_id == me["id"]:
+            recent = s.scalar(select(Scan.id).join(SiteScan, SiteScan.scan_id == Scan.id).where(
+                SiteScan.site_id == site.id, Scan.created_at >= utcnow() - timedelta(hours=6)))
+            if recent:
+                return _redirect(f"/account?err={quote('This site was scanned less than 6 hours ago.')}")
+            site.next_run_at = utcnow()
+    return _redirect(f"/account?msg={quote('Scan queued.')}")
+
+
+# ---------------------------------------------------------------- pricing
+@router.get("/pricing", response_class=HTMLResponse)
+def pricing(request: Request, joined: int = 0):
+    s = config.settings
+    me = current_user(request)
+    checkout = ""
+    if s.checkout_url:
+        checkout = s.checkout_url + (("&" if "?" in s.checkout_url else "?") + "checkout[email]=" + quote(me["email"])
+                                     if me else "")
+    return _page(request, "pricing.html", {"checkout": checkout, "joined": bool(joined)})
+
+
+@router.post("/pricing/waitlist")
+def waitlist(email: str = Form("")):
+    e = clean_email(email)
+    if not e:
+        return _redirect("/pricing")
+    with session_scope() as s:
+        if not s.scalar(select(Waitlist.id).where(Waitlist.email == e)):
+            s.add(Waitlist(email=e))
+    return _redirect("/pricing?joined=1")
+
+
+# ---------------------------------------------------------------- payments (Lemon Squeezy)
+ACTIVE = {"active", "on_trial", "past_due", "cancelled"}  # cancelled = paid period still running
+INACTIVE = {"expired", "unpaid", "paused"}
+
+
+@router.post("/webhooks/lemonsqueezy")
+async def lemonsqueezy(request: Request):
+    secret = config.settings.ls_webhook_secret
+    if not secret:
+        raise HTTPException(404)
+    raw = await request.body()
+    expected = hmac.new(secret.encode(), raw, hashlib.sha256).hexdigest()
+    if not hmac.compare_digest(expected, request.headers.get("x-signature", "")):
+        raise HTTPException(401, "bad signature")
+    try:
+        body = json.loads(raw)
+        event = body["meta"]["event_name"]
+        attrs = body["data"]["attributes"]
+        email = clean_email(attrs.get("user_email", ""))
+        status = attrs.get("status", "")
+    except (ValueError, KeyError, TypeError):
+        raise HTTPException(400, "malformed payload")
+    if not event.startswith("subscription_") or not email:
+        return JSONResponse({"ok": True, "ignored": True})
+    plan = "pro" if status in ACTIVE and event != "subscription_expired" else ("free" if status in INACTIVE or event == "subscription_expired" else None)
+    if plan is None:
+        return JSONResponse({"ok": True, "ignored": True})
+    with session_scope() as s:
+        user = s.scalars(select(User).where(User.email == email)).first()
+        if user is None:
+            user = User(email=email)
+            s.add(user)
+        user.plan = plan
+    log.info("plan for %s set to %s (%s/%s)", email, plan, event, status)
+    return JSONResponse({"ok": True, "plan": plan})

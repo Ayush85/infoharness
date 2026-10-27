@@ -31,6 +31,20 @@ browser ──► Caddy (HTTPS) ──► app (FastAPI, :8000) ──► Postgre
 Your `.env` on the server is never overwritten by deploys. Revoke access any time:
 `sudo rm /home/deploy/.ssh/authorized_keys`.
 
+## Accounts, watched sites and plans
+
+| Feature | How it works |
+|---|---|
+| Sign in | Passwordless: a one-time link by email (valid 15 min, single use, rate limited), then a signed cookie |
+| Watched sites | `/account`: Free = `FREE_SITES` (1, monthly), Pro = `PRO_SITES` (5, daily/weekly/monthly). The worker queues rescans |
+| Alerts | After each rescan the owner is emailed only when there are **new** problems or the grade dropped (plus a first report) |
+| Pricing | `/pricing`. With no `CHECKOUT_URL` it shows a waitlist (table `waitlist`) |
+| Payments | Lemon Squeezy webhook `POST /webhooks/lemonsqueezy` (HMAC-SHA256 `X-Signature`). Subscription events switch the plan by email |
+
+Set these without touching the server: in GitHub add **secrets** `RESEND_API_KEY`, `SECRET_KEY`, `LS_WEBHOOK_SECRET`
+and **variables** `MAIL_FROM`, `ADMIN_EMAILS`, `CHECKOUT_URL`, `PRO_PRICE`. Each deploy writes the non-empty ones into
+the server's `.env`. Email needs a verified sending domain at Resend (add its DNS records for infoharness.com).
+
 ## Deploy manually (DigitalOcean droplet or any Ubuntu server)
 
 1. **DNS:** add `A` records `infoharness.com` and `www.infoharness.com` → your server IP.
