@@ -92,6 +92,11 @@ jobs:
           done
           echo "::warning::App is healthy on the server but https://$DOMAIN isn't reachable yet (DNS or certificate still pending?)"
 
+      - name: Live test (real scan through the public site)
+        env:
+          TEST_URL: ${{ vars.DEPLOY_TEST_URL }}
+        run: python3 scripts/live_test.py "https://$DOMAIN" "$TEST_URL"
+
       - name: Show logs on failure
         if: failure()
         run: ssh server "cd '$DEPLOY_PATH' && sudo docker compose logs --tail 80 app worker caddy" || true
