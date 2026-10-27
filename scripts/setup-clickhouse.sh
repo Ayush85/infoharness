@@ -28,6 +28,11 @@ mkdir -p "$STATE_DIR"; chmod 700 "$STATE_DIR"
 
 # ---------------------------------------------------------------- install
 if ! command -v clickhouse-server >/dev/null 2>&1; then
+  if ss -ltn 2>/dev/null | grep -qE ':(8123|9000)\b'; then
+    die "Something already listens on 8123/9000 but clickhouse-server isn't installed on the host
+   (probably ClickHouse in Docker). Not installing a second copy. Use your existing admin login instead:
+   CLICKHOUSE_ADMIN_USER=... CLICKHOUSE_ADMIN_PASSWORD=... sudo -E ./scripts/provision-project.sh <name> --clickhouse --no-postgres"
+  fi
   say "Installing ClickHouse (LTS) from packages.clickhouse.com…"
   apt-get install -y apt-transport-https ca-certificates curl gnupg
   curl -fsSL 'https://packages.clickhouse.com/rpm/lts/repodata/repomd.xml.key' \
@@ -112,6 +117,9 @@ CLICKHOUSE_ADMIN_PASSWORD=${ADMIN_PASS}
 ENV
 
 # ---------------------------------------------------------------- restart & verify
+if systemctl is-active --quiet clickhouse-server; then
+  warn "Restarting ClickHouse to apply settings — queries from other projects pause for a few seconds."
+fi
 say "Restarting ClickHouse…"
 systemctl restart clickhouse-server
 for _ in $(seq 1 30); do

@@ -69,6 +69,14 @@ Scripts are safe to re-run: existing databases are kept and the stored password 
 edits your existing configuration. It creates an `aydexis_admin` user with access management (needed to
 create per-project users) and caps ClickHouse at 35% of RAM so it coexists with PostgreSQL and your apps.
 
+**ClickHouse already running in Docker?** `setup-clickhouse.sh` detects it and stops instead of installing
+a second copy. Provision projects with your existing admin login; the script then talks to the HTTP port
+(8123) and also allows logins from the Docker bridge range:
+`CLICKHOUSE_ADMIN_USER=... CLICKHOUSE_ADMIN_PASSWORD=... sudo -E ./scripts/provision-project.sh myproject --clickhouse --no-postgres`
+
+**PostgreSQL in Docker or a managed database?** Set the admin URL instead of using the local `postgres` user:
+`PG_ADMIN_URL=postgresql://postgres:PASS@127.0.0.1:5432/postgres sudo -E ./scripts/provision-project.sh myproject`
+
 **Connecting from Docker:** containers on the default bridge network can't reach `127.0.0.1` on the host.
 Use `network_mode: host` (as infoharness does in `docker-compose.host.yml`) or point the app at the
 Docker bridge gateway and allow it in `pg_hba.conf`.

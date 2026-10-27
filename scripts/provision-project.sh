@@ -46,12 +46,23 @@ fi
 [[ -n "$PASSWORD" ]] || PASSWORD="$(openssl rand -hex 24)"
 
 # ---------------------------------------------------------------- PostgreSQL
-pg_admin() {  # pg_admin <psql args...>
+pg_admin() {  # pg_admin -d <database> <psql args...>
+  local db="postgres" args=()
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      -d) db="$2"; shift 2 ;;
+      *) args+=("$1"); shift ;;
+    esac
+  done
+  command -v psql >/dev/null || die "psql not found. Install postgresql-client."
   if [[ -n "${PG_ADMIN_URL:-}" ]]; then
-    psql "$PG_ADMIN_URL" -v ON_ERROR_STOP=1 -qtA "$@"
+    # psql's -d would replace the whole URL, so swap the database name inside the URL instead.
+    local base="${PG_ADMIN_URL%%\?*}" rest
+    base="${base%/}"; rest="${base#*://}"
+    [[ "$rest" == */* ]] && base="${base%/*}"
+    psql "$base/$db" -v ON_ERROR_STOP=1 -qtA "${args[@]}"
   else
-    command -v psql >/dev/null || die "psql not found. Install postgresql-client or set PG_ADMIN_URL."
-    sudo -u postgres psql -p "$PG_PORT" -v ON_ERROR_STOP=1 -qtA "$@"
+    sudo -u postgres psql -p "$PG_PORT" -d "$db" -v ON_ERROR_STOP=1 -qtA "${args[@]}"
   fi
 }
 
@@ -83,26 +94,38 @@ fi
 
 # ---------------------------------------------------------------- ClickHouse
 if (( WANT_CH )); then
-  command -v clickhouse-client >/dev/null || die "ClickHouse isn't installed. Run: sudo ./scripts/setup-clickhouse.sh"
   if [[ -z "${CLICKHOUSE_ADMIN_USER:-}" && -f "$STATE_DIR/clickhouse-admin.env" ]]; then
     # shellcheck disable=SC1091
     source "$STATE_DIR/clickhouse-admin.env"
   fi
   CH_ADMIN_USER="${CLICKHOUSE_ADMIN_USER:-default}"
   CH_ADMIN_PASS="${CLICKHOUSE_ADMIN_PASSWORD:-}"
-  ch() { clickhouse-client --host "$CH_HOST" --port "$CH_TCP_PORT" --user "$CH_ADMIN_USER" --password "$CH_ADMIN_PASS" --multiquery "$@"; }
-  ch -q "SELECT 1" >/dev/null || die "Can't connect to ClickHouse as '$CH_ADMIN_USER'. Run setup-clickhouse.sh first."
+  # One statement per call. Uses clickhouse-client if installed, otherwise the HTTP port
+  # (works when ClickHouse runs in Docker with 8123 published on localhost).
+  ch_as() {  # ch_as <user> <password> <sql>
+    if command -v clickhouse-client >/dev/null; then
+      clickhouse-client --host "$CH_HOST" --port "$CH_TCP_PORT" --user "$1" --password "$2" -q "$3"
+    else
+      curl -fsS --max-time 30 "http://$CH_HOST:$CH_HTTP_PORT/" -u "$1:$2" --data-binary "$3"
+    fi
+  }
+  ch() { ch_as "$CH_ADMIN_USER" "$CH_ADMIN_PASS" "$1"; }
+  # Logins allowed from this machine only. ClickHouse in Docker sees host connections from the
+  # Docker bridge, so allow that private range too when it isn't installed natively.
+  if [[ -n "${CH_USER_HOSTS:-}" ]]; then CH_HOSTS="$CH_USER_HOSTS"
+  elif command -v clickhouse-server >/dev/null; then CH_HOSTS="LOCAL"
+  else CH_HOSTS="LOCAL, IP '172.16.0.0/12'"; fi
+  ch "SELECT 1" >/dev/null || die "Can't reach ClickHouse as '$CH_ADMIN_USER' on $CH_HOST. Run setup-clickhouse.sh, or set CLICKHOUSE_ADMIN_USER/CLICKHOUSE_ADMIN_PASSWORD."
 
   say "ClickHouse: database + user '$NAME' (memory-capped so one project can't starve the others)"
-  ch -q "
-    CREATE DATABASE IF NOT EXISTS \`$NAME\`;
-    CREATE SETTINGS PROFILE IF NOT EXISTS \`${NAME}_profile\` SETTINGS max_memory_usage = ${CH_MAX_MEMORY:-600000000}, max_execution_time = ${CH_MAX_SECONDS:-120};
-    CREATE USER IF NOT EXISTS \`$NAME\` IDENTIFIED WITH sha256_password BY '$PASSWORD' HOST LOCAL;
-    ALTER USER \`$NAME\` IDENTIFIED WITH sha256_password BY '$PASSWORD' HOST LOCAL DEFAULT DATABASE \`$NAME\` SETTINGS PROFILE '${NAME}_profile';
-    GRANT ALL ON \`$NAME\`.* TO \`$NAME\`;
-  " || die "ClickHouse provisioning failed. If it says 'Not enough privileges', run setup-clickhouse.sh (it creates an admin with access management)."
-  clickhouse-client --host "$CH_HOST" --port "$CH_TCP_PORT" --user "$NAME" --password "$PASSWORD" -q "SELECT 1" >/dev/null \
-    || warn "User created, but a test login failed."
+  {
+    ch "CREATE DATABASE IF NOT EXISTS \`$NAME\`" &&
+    ch "CREATE SETTINGS PROFILE IF NOT EXISTS \`${NAME}_profile\` SETTINGS max_memory_usage = ${CH_MAX_MEMORY:-600000000}, max_execution_time = ${CH_MAX_SECONDS:-120}" &&
+    ch "CREATE USER IF NOT EXISTS \`$NAME\` IDENTIFIED WITH sha256_password BY '$PASSWORD' HOST $CH_HOSTS" &&
+    ch "ALTER USER \`$NAME\` IDENTIFIED WITH sha256_password BY '$PASSWORD' HOST $CH_HOSTS DEFAULT DATABASE \`$NAME\` SETTINGS PROFILE '${NAME}_profile'" &&
+    ch "GRANT ALL ON \`$NAME\`.* TO \`$NAME\`"
+  } >/dev/null || die "ClickHouse provisioning failed. If it says 'Not enough privileges', run setup-clickhouse.sh (it creates an admin with access management)."
+  ch_as "$NAME" "$PASSWORD" "SELECT 1" >/dev/null || warn "User created, but a test login failed."
 fi
 
 # ---------------------------------------------------------------- credentials file
