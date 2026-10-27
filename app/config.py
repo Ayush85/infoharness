@@ -71,6 +71,7 @@ class Settings:
 
     # Accounts, email, plans
     secret_key: str = field(default_factory=lambda: os.getenv("SECRET_KEY", "") or os.getenv("IP_HASH_SALT", "change-me"))
+    contact_email: str = field(default_factory=lambda: os.getenv("CONTACT_EMAIL", "info@infoharness.com"))
     mail_from: str = field(default_factory=lambda: os.getenv("MAIL_FROM", "infoharness <hello@infoharness.com>"))
     resend_api_key: str = field(default_factory=lambda: os.getenv("RESEND_API_KEY", ""))
     smtp_host: str = field(default_factory=lambda: os.getenv("SMTP_HOST", ""))

@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}Privacy · infoharness{% endblock %}
+{% block description %}What infoharness stores when you scan a site or sign in.{% endblock %}
+{% block content %}<div class="wrap page legal">
+<h1>Privacy</h1>
+<h2>What we scan</h2><p>Only pages anyone can open without signing in. We store the text of those pages' findings, the page URLs, titles and word counts. Reports of publicly scanned sites are public and may appear in search engines and the <a href="/reports">reports list</a>.</p>
+<h2>What we store about you</h2><p>If you scan without an account, a salted hash of your IP address, used only for rate limiting. If you sign in, your email address, your watched sites and your plan. We never store passwords: sign-in uses one-time email links.</p>
+<h2>Cookies</h2><p>One signed session cookie when you sign in. No advertising or tracking cookies.</p>
+<h2>Email</h2><p>We send sign-in links and the alerts you ask for. Nothing else.</p>
+<h2>Deleting your data</h2><p>Email <a href="mailto:{{ email }}">{{ email }}</a> and we will delete your account, watched sites and reports.</p>
+</div>{% endblock %}

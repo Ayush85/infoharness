@@ -98,12 +98,23 @@ def report(request: Request, scan_id: str):
         history = [{"id": h.id, "grade": h.grade, "score": round(h.score or 0), "when": h.finished_at or h.created_at,
                     "issues": (h.summary or {}).get("total_issues", 0), "pages": h.pages_crawled}
                    for h in history]
+        diff = None
+        if scan.status == "done":
+            prev = s.scalars(select(Scan).where(Scan.url == scan.url, Scan.status == "done", Scan.created_at < scan.created_at)
+                             .order_by(Scan.created_at.desc()).limit(1)).first()
+            if prev:
+                from app.monitor import fingerprint
+                old = {fingerprint(x) for x in s.scalars(select(Issue).where(Issue.scan_id == prev.id))}
+                cur = {i.id: fingerprint(i) for i in issues}
+                new_ids = {k for k, v in cur.items() if v not in old}
+                diff = {"prev_id": prev.id, "prev_when": prev.finished_at or prev.created_at, "prev_grade": prev.grade,
+                        "new_ids": new_ids, "new": len(new_ids), "fixed": len(old - set(cur.values()))}
         indexable = seo.is_public_latest(scan)
         latest_id = scan.id
         if not indexable and scan.status == "done" and not (scan.client_hash or "").startswith("site:") and (scan.pages_crawled or 0) >= seo.MIN_PUBLIC_PAGES:
             latest_id = s.scalar(select(Scan.id).where(Scan.url == scan.url, Scan.status == "done",
                                                        ~Scan.client_hash.like("site:%")).order_by(Scan.created_at.desc()).limit(1)) or scan.id
-        ctx = {"indexable": indexable, "latest_id": latest_id, "history": history, "scan": scan, "grouped": [(t, grouped[t]) for t in TYPE_LABELS if t in grouped],
+        ctx = {"diff": diff, "indexable": indexable, "latest_id": latest_id, "history": history, "scan": scan, "grouped": [(t, grouped[t]) for t in TYPE_LABELS if t in grouped],
                "verdict": verdict(scan, issues), "total": len(issues), "report_md": report_md(scan, [(t, grouped[t]) for t in TYPE_LABELS if t in grouped]) if issues else "",
                "share_url": f"{config.settings.public_base_url}/r/{scan.id}",
                "badge_url": f"{config.settings.public_base_url}/badge/{scan.id}.svg"}
@@ -176,6 +187,28 @@ def get_scan(scan_id: str):
             data["queue_position"] = s.scalar(select(func.count()).select_from(Scan).where(
                 Scan.status == "queued", Scan.created_at <= scan.created_at))
         return data
+
+
+def _export_rows(scan_id: str):
+    with session_scope() as s:
+        scan = s.get(Scan, scan_id)
+        if scan is None or scan.status != "done":
+            raise HTTPException(404, "Report not found.")
+        rows = [(i.type, i.severity, i.title, i.page_a, i.page_b, (i.quote_a or "")[:300], (i.quote_b or "")[:300], i.detail or "")
+                for i in s.scalars(select(Issue).where(Issue.scan_id == scan_id).order_by(Issue.id))]
+        return scan.url, rows
+
+
+@app.get("/r/{scan_id}/export.csv")
+def export_csv(scan_id: str):
+    import csv, io
+    url, rows = _export_rows(scan_id)
+    buf = io.StringIO()
+    w = csv.writer(buf)
+    w.writerow(["type", "severity", "title", "page_a", "page_b", "quote_a", "quote_b", "detail"])
+    w.writerows(rows)
+    return Response(buf.getvalue(), media_type="text/csv",
+                    headers={"Content-Disposition": f'attachment; filename="docs-health-{scan_id}.csv"', "X-Robots-Tag": "noindex"})
 
 
 BADGE = """<svg xmlns="http://www.w3.org/2000/svg" width="{w}" height="20" role="img" aria-label="docs health: {value}">

@@ -370,3 +370,7 @@ cite a { color: var(--muted); }
 
 .history{margin:.8rem 0}.history table{width:100%;border-collapse:collapse;font-size:.9rem;margin-top:.5rem}
 .history th,.history td{text-align:left;padding:.35rem .5rem;border-bottom:1px solid var(--line,#dde1e7)}.history tr.current{background:var(--marker-soft,#fff7c2)}
+
+.tag-new{background:var(--marker,#ffe45c);color:#0e1a2b;font-size:.7rem;font-weight:700;padding:.1rem .4rem;border-radius:3px;vertical-align:middle;text-transform:uppercase}
+.notice.diff{border-left:3px solid var(--red,#d23b3b);padding:.5rem .8rem;margin:.6rem 0}
+.legal h2{margin-top:1.6rem}

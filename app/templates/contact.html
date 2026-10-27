@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}Contact · infoharness{% endblock %}
+{% block description %}How to reach infoharness, and how to ask for a report to be removed.{% endblock %}
+{% block content %}<div class="wrap page legal">
+<h1>Contact</h1>
+<p>Email <a href="mailto:{{ email }}">{{ email }}</a>.</p>
+<h2>Remove a public report</h2>
+<p>Write to us from an address at the site's domain (or tell us which page on your site we can place a short code on) and we will delete every report for that site within two working days. To stop future scans, <a href="/bot#block">block InfoharnessBot</a> in your robots.txt.</p>
+<h2>Report a wrong finding</h2>
+<p>Send the report link and the finding. False positives are bugs and we fix them.</p>
+</div>{% endblock %}

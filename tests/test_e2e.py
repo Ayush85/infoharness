@@ -88,3 +88,21 @@ def test_public_reports_are_indexable(env, docs_site):
     assert sid in client.get("/sitemap.xml").text
     assert "Disallow: /r/" not in client.get("/robots.txt").text
     assert "docs_site" in client.get("/reports").text or "127.0.0.1" in client.get("/reports").text
+
+
+def test_export_pages_and_diff(env, docs_site):
+    from fastapi.testclient import TestClient
+    from app.main import app
+    from app import worker
+    client = TestClient(app)
+    first = client.post("/api/scans", json={"url": f"{docs_site}/docs"}).json()["id"]
+    worker.run_once()
+    second = client.post("/api/scans", json={"url": f"{docs_site}/docs", "fresh": True}).json()["id"]
+    worker.run_once()
+    csv_text = client.get(f"/r/{second}/export.csv")
+    assert csv_text.status_code == 200 and csv_text.text.startswith("type,severity,title")
+    html = client.get(f"/r/{second}").text
+    assert "previous scan" in html and "0 new" in html and "Download CSV" in html
+    assert f"/r/{first}" in html
+    for path in ("/contact", "/privacy", "/terms"):
+        assert client.get(path).status_code == 200

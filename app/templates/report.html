@@ -22,6 +22,7 @@
     <p class="report-meta">{{ scan.pages_crawled }} pages read{% if scan.summary.pages_found and scan.summary.pages_found > scan.pages_crawled %} of {{ scan.summary.pages_found }} found{% endif %}{% if scan.finished_at %} on {{ scan.finished_at.strftime('%d %b %Y') }}{% endif %}.
       {% if scan.summary.links_checked %}{{ scan.summary.links_checked }} links checked.{% endif %}
       {% if not scan.summary.llm_verified %}Contradictions come from pattern matching, so give each a quick look before you act on it.{% endif %}</p>
+    {% if diff %}<p class="notice diff">Since the <a href="/r/{{ diff.prev_id }}">previous scan</a> ({{ diff.prev_when.strftime('%d %b %Y') }}, grade {{ diff.prev_grade }}): <strong>{{ diff.new }} new</strong> and <strong>{{ diff.fixed }} fixed</strong>.</p>{% endif %}
     {% if scan.summary.partial %}
     <p class="notice coverage">This scan read {{ scan.pages_crawled }} of {{ scan.summary.pages_found or scan.pages_crawled }} pages we found, so it is a sample, not the whole site. Orphan pages are not reported for partial scans because we can't tell what the unread pages link to.
       {% if me and me.plan != 'pro' %}<a href="/pricing">Pro scans up to 2,000 pages.</a>{% endif %}</p>
@@ -36,6 +37,7 @@
     {% endif %}
     <div class="report-actions">
       <button type="button" class="secondary" data-copy-text="{{ share_url }}">Copy report link</button>
+      <a class="btn secondary" href="/r/{{ scan.id }}/export.csv" download>Download CSV</a>
       {% if report_md %}<button type="button" class="secondary" data-copy-from="report-md">Copy as Markdown</button>{% endif %}
       <a class="button secondary" href="/api/scans/{{ scan.id }}" download="docs-health-{{ scan.id }}.json">Download JSON</a>
       <button type="button" class="secondary" data-print>Print or save as PDF</button>
@@ -92,7 +94,7 @@
     <ol class="issues">
     {% for i in items %}
       <li class="issue sev-{{ i.severity }}">
-        <div class="issue-head"><h3>{{ i.title }}</h3><span class="sev" title="How likely this is to cause a wrong answer">{{ i.severity }}</span></div>
+        <div class="issue-head"><h3>{{ i.title }}{% if diff and i.id in diff.new_ids %} <span class="tag-new">New</span>{% endif %}</h3><span class="sev" title="How likely this is to cause a wrong answer">{{ i.severity }}</span></div>
         {% if i.detail %}<p class="issue-detail">{{ i.detail }}</p>{% endif %}
         {% if i.quote_a and i.quote_b %}
           <div class="compare">

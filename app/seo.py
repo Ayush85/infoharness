@@ -53,7 +53,7 @@ def home_jsonld() -> dict:
 
 BY_SLUG = {g["slug"]: g for g in GUIDES}
 PRIVATE = ("/api/", "/account", "/login", "/logout", "/webhooks/")
-STATIC_URLS = ["/", "/pricing", "/guides", "/reports", "/bot"]
+STATIC_URLS = ["/", "/pricing", "/guides", "/reports", "/bot", "/contact", "/privacy", "/terms"]
 
 
 def _base() -> str:
@@ -150,3 +150,18 @@ def guide(request: Request, slug: str):
         return templates.TemplateResponse(request, "notfound.html", status_code=404)
     others = [x for x in GUIDES if x["slug"] != slug]
     return templates.TemplateResponse(request, f"guides/{slug}.html", {"guide": g, "others": others})
+
+
+@router.get("/contact", response_class=HTMLResponse)
+def contact(request: Request):
+    return templates.TemplateResponse(request, "contact.html", {"email": config.settings.contact_email})
+
+
+@router.get("/privacy", response_class=HTMLResponse)
+def privacy(request: Request):
+    return templates.TemplateResponse(request, "privacy.html", {"email": config.settings.contact_email})
+
+
+@router.get("/terms", response_class=HTMLResponse)
+def terms(request: Request):
+    return templates.TemplateResponse(request, "terms.html", {"email": config.settings.contact_email})
