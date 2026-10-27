@@ -18,7 +18,20 @@ browser ──► Caddy (HTTPS) ──► app (FastAPI, :8000) ──► Postgre
 | `app/llm.py` | Optional LLM verification; rejects any finding whose quotes aren't on the page |
 | `app/scoring.py` | `score = 100·exp(−0.8 · penalty / pages)`, graded A–F |
 
-## Deploy (DigitalOcean droplet or any Ubuntu server)
+## Automatic deploys from GitHub (recommended)
+
+1. On the droplet, once: `sudo bash scripts/setup-deploy-access.sh` (from a checkout of this repo, or download it).
+   It creates a `deploy` user with its own SSH key and prints the values to add in GitHub.
+2. GitHub → repo → Settings → Secrets and variables → Actions: add the printed secrets
+   (`DEPLOY_HOST`, `DEPLOY_PORT`, `DEPLOY_KNOWN_HOSTS`, `DEPLOY_SSH_KEY`) and variables
+   (`DEPLOY_DOMAIN`, `DEPLOY_EMAIL`, optional `DEPLOY_PATH`, `DEPLOY_ARGS`).
+3. Actions → **Deploy** → Run workflow. After that, every push to `main` runs the tests, uploads the
+   code over SSH (host key pinned), runs `deploy.sh` and checks `https://DOMAIN/healthz`.
+
+Your `.env` on the server is never overwritten by deploys. Revoke access any time:
+`sudo rm /home/deploy/.ssh/authorized_keys`.
+
+## Deploy manually (DigitalOcean droplet or any Ubuntu server)
 
 1. **DNS:** add `A` records `infoharness.com` and `www.infoharness.com` → your server IP.
 2. **Copy the project** to the server, e.g. `scp -r infoharness root@SERVER:/opt/`.
