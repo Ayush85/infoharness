@@ -78,20 +78,7 @@ class Crawler:
     def __init__(self, start_url: str, *, max_pages: int | None = None, deadline: float | None = None,
                  on_progress=None, client: httpx.AsyncClient | None = None):
         s = config.settings
-        self.start_url = normalize(start_url)
-        sp = urlsplit(self.start_url)
-        self.scheme = sp.scheme
-        self.host = sp.hostname or ""
-        self.netloc = sp.netloc
-        path = urlsplit(start_url).path or "/"
-        if path.endswith("/"):
-            self.prefix = path
-        else:
-            last = path.rsplit("/", 1)[-1]
-            # "/docs" or "/hc/en-us" look like folders; "/help/article-12" or "/a/page.html" look like pages
-            looks_like_folder = "." not in last and not re.search(r"\d", last)
-            self.prefix = path + "/" if looks_like_folder else path.rsplit("/", 1)[0] + "/"
-        self.root = f"{self.scheme}://{self.netloc}{self.prefix}"
+        self._set_scope(start_url)
         self.max_pages = max_pages or s.max_pages
         self.deadline = deadline or (time.monotonic() + s.max_scan_seconds * 0.6)
         self.on_progress = on_progress
@@ -100,6 +87,23 @@ class Crawler:
         self.result = CrawlResult(start_url=self.start_url, root=self.root)
         self._queued: set[str] = set()
         self._sem = asyncio.Semaphore(s.crawl_concurrency)
+
+    def _set_scope(self, url: str) -> None:
+        """Derive host and folder prefix from the start URL (also used after a redirect moves the site)."""
+        self.start_url = normalize(url)
+        sp = urlsplit(self.start_url)
+        self.scheme = sp.scheme
+        self.host = sp.hostname or ""
+        self.netloc = sp.netloc
+        path = urlsplit(url).path or "/"
+        if path.endswith("/"):
+            self.prefix = path
+        else:
+            last = path.rsplit("/", 1)[-1]
+            # "/docs" or "/hc/en-us" look like folders; "/help/article-12" or "/a/page.html" look like pages
+            looks_like_folder = "." not in last and not re.search(r"\d", last)
+            self.prefix = path + "/" if looks_like_folder else path.rsplit("/", 1)[0] + "/"
+        self.root = f"{self.scheme}://{self.netloc}{self.prefix}"
 
     # ---------- scope ----------
     def in_scope(self, url: str) -> bool:
@@ -207,6 +211,15 @@ class Crawler:
                 limits=httpx.Limits(max_connections=s.crawl_concurrency * 2),
             )
         try:
+            # Vanity domains often redirect to the real docs host (docs.python-requests.org -> requests.readthedocs.io).
+            # Follow that once, so the scan covers the real site instead of stopping at the first page.
+            first = await self.fetch(self.start_url, want_body=False)
+            if first.status and first.status < 400 and not first.error:
+                moved = normalize(first.final_url)
+                mp = urlsplit(moved)
+                if _bare_host(mp.hostname or "") != _bare_host(self.host) or not (mp.path or "/").startswith(self.prefix):
+                    self._set_scope(first.final_url)
+                    self.result.start_url, self.result.root = self.start_url, self.root
             declared = await self._load_robots()
             if not self.allowed(self.start_url):
                 self.result.stopped_reason = "robots.txt disallows crawling this URL"

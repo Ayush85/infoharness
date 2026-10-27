@@ -96,6 +96,10 @@ async def _run(url: str, prog: Progress) -> tuple[list[Finding], list[PageDoc], 
             raise ScanError("We couldn't connect to this site. Check the URL and try again.")
         raise ScanError("We couldn't read any pages. The site may block bots or render its docs with JavaScript only.")
 
+    if len(ok_pages) < 2:
+        raise ScanError("We could only read one page at this address, so there is nothing to compare. "
+                        "Try the main docs or help-center URL (for example https://example.com/docs/).")
+
     # ---- page docs with inbound link counts
     inbound = {u: len({src for src in sources if src != u}) for u, sources in crawl.link_sources.items()}
     pages = [PageDoc(url=p.url, title=p.extracted.title, blocks=p.extracted.blocks,

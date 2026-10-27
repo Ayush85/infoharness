@@ -105,3 +105,21 @@ def env(tmp_path, monkeypatch):
     config.reload_settings()
     db.init_engine()
     yield config.settings
+
+
+@pytest.fixture(scope="session")
+def redirect_site(docs_site):
+    """A vanity domain that 301-redirects everything to the real docs server (different host:port)."""
+    class Redirect(http.server.BaseHTTPRequestHandler):
+        def do_GET(self):
+            self.send_response(301)
+            self.send_header("Location", docs_site + self.path)
+            self.end_headers()
+
+        def log_message(self, *a):
+            pass
+
+    server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), Redirect)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    yield f"http://127.0.0.1:{server.server_address[1]}"
+    server.shutdown()

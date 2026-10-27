@@ -59,3 +59,13 @@ def test_unreachable_site_fails_cleanly(env):
     assert data["status"] == "failed" and "connect" in data["error"]
     assert client.get(f"/r/{scan_id}").status_code == 200
     assert client.get("/r/doesnotexist").status_code == 404
+
+
+def test_vanity_domain_redirect_is_followed(env, docs_site, redirect_site):
+    client = TestClient(app)
+    scan_id = client.post("/api/scans", json={"url": f"{redirect_site}/docs/"}).json()["id"]
+    worker.run_once()
+    data = client.get(f"/api/scans/{scan_id}").json()
+    assert data["status"] == "done", data
+    assert data["pages_crawled"] >= 8
+    assert any(i["type"] == "contradiction" for i in data["issues"])
