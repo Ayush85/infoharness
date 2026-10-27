@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+{% block title %}{% if scan.status == 'done' %}Docs health {{ scan.grade }} ({{ scan.score|round|int }}) — {% endif %}{{ scan.url }} · infoharness{% endblock %}
+{% block head %}<meta name="robots" content="noindex">{% endblock %}
+{% block content %}
+<section class="report-head" data-scan-id="{{ scan.id }}" data-status="{{ scan.status }}">
+  <div class="report-title">
+    <h1>Docs health of <a href="{{ scan.url }}" rel="nofollow noopener" target="_blank">{{ scan.url|replace('https://','')|replace('http://','') }}</a></h1>
+    {% if scan.status == 'done' %}
+      <p class="report-meta">{{ scan.pages_crawled }} pages read
+        {% if scan.finished_at %}on {{ scan.finished_at.strftime('%d %b %Y') }}{% endif %}.
+        {% if scan.summary.stopped_reason %}Stopped early: {{ scan.summary.stopped_reason }}.{% endif %}
+        {% if not scan.summary.llm_verified %}Contradictions were found by pattern matching and are worth a quick review.{% endif %}
+      </p>
+    {% endif %}
+  </div>
+  {% if scan.status == 'done' %}
+  <div class="stamp grade-{{ scan.grade|lower }}" role="img" aria-label="Grade {{ scan.grade }}, score {{ scan.score|round|int }} out of 100">
+    <span class="stamp-grade">{{ scan.grade }}</span>
+    <span class="stamp-score">{{ scan.score|round|int }}/100</span>
+  </div>
+  {% endif %}
+</section>
+
+{% if scan.status in ('queued', 'running') %}
+<section class="progress-panel" aria-live="polite">
+  <p class="progress-stage" id="stage">{{ 'Waiting for a free scanner…' if scan.status == 'queued' else scan.stage|capitalize }}</p>
+  <div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ scan.progress }}">
+    <span id="bar-fill" style="width: {{ scan.progress }}%"></span>
+  </div>
+  <p class="progress-pages"><span id="pages">{{ scan.pages_crawled }}</span> pages read so far. This page updates on its own.</p>
+</section>
+{% elif scan.status == 'failed' %}
+<section class="failed-panel">
+  <h2>The scan didn't finish</h2>
+  <p>{{ scan.error or 'Something went wrong.' }}</p>
+  <p><a class="button" href="/">Scan another site</a></p>
+</section>
+{% else %}
+<section class="tally" aria-label="Issue counts">
+  {% for key, label in type_labels.items() %}
+    {% set n = scan.summary.by_type[key] if scan.summary.by_type and key in scan.summary.by_type else 0 %}
+    <a href="#{{ key }}" class="tally-item{% if n == 0 %} is-zero{% endif %}">
+      <span class="tally-n">{{ n }}</span><span class="tally-l">{{ label }}</span>
+    </a>
+  {% endfor %}
+</section>
+
+{% if not grouped %}
+<section class="clean">
+  <h2>No problems found</h2>
+  <p>We read {{ scan.pages_crawled }} pages and found nothing to fix. Your docs are in good shape for AI assistants.</p>
+</section>
+{% endif %}
+
+{% for type, items in grouped %}
+<section class="issue-group" id="{{ type }}">
+  <h2>{{ type_labels[type] }} <span class="count">{{ items|length }}</span></h2>
+  <ol class="issues">
+  {% for i in items %}
+    <li class="issue sev-{{ i.severity }}">
+      <div class="issue-head">
+        <span class="sev" title="Severity">{{ i.severity }}</span>
+        <h3>{{ i.title }}</h3>
+      </div>
+      {% if i.detail %}<p class="issue-detail">{{ i.detail }}</p>{% endif %}
+      {% if i.quote_a and i.quote_b %}
+        <div class="quote-pair">
+          <blockquote><p>{{ i.quote_a|mark_values(i.extra) }}</p><cite><a href="{{ i.page_a }}" target="_blank" rel="nofollow noopener">{{ i.page_a|replace(scan.root, '/') }}</a></cite></blockquote>
+          <div class="versus" aria-hidden="true"></div>
+          <blockquote><p>{{ i.quote_b|mark_values(i.extra) }}</p><cite><a href="{{ i.page_b }}" target="_blank" rel="nofollow noopener">{{ i.page_b|replace(scan.root, '/') }}</a></cite></blockquote>
+        </div>
+      {% elif i.quote_a %}
+        <blockquote class="single"><p>{{ i.quote_a }}</p><cite><a href="{{ i.page_a }}" target="_blank" rel="nofollow noopener">{{ i.page_a|replace(scan.root, '/') }}</a></cite></blockquote>
+      {% else %}
+        <ul class="pages">
+          {% if i.extra and i.extra.pages %}
+            {% for p in i.extra.pages %}<li><a href="{{ p }}" target="_blank" rel="nofollow noopener">{{ p }}</a></li>{% endfor %}
+          {% elif i.type == 'broken_link' %}
+            <li>Target: <a href="{{ i.page_b }}" target="_blank" rel="nofollow noopener">{{ i.page_b }}</a></li>
+            {% for p in (i.extra.sources or [])[:5] %}<li>Linked from: <a href="{{ p }}" target="_blank" rel="nofollow noopener">{{ p }}</a></li>{% endfor %}
+          {% else %}
+            {% if i.page_a %}<li><a href="{{ i.page_a }}" target="_blank" rel="nofollow noopener">{{ i.page_a }}</a></li>{% endif %}
+            {% if i.page_b %}<li><a href="{{ i.page_b }}" target="_blank" rel="nofollow noopener">{{ i.page_b }}</a></li>{% endif %}
+          {% endif %}
+        </ul>
+      {% endif %}
+    </li>
+  {% endfor %}
+  </ol>
+</section>
+{% endfor %}
+
+<section class="share">
+  <h2>Share or embed</h2>
+  <label for="share-url">Report link</label>
+  <div class="field-row">
+    <input id="share-url" type="text" readonly value="{{ share_url }}">
+    <button type="button" class="secondary" data-copy="share-url">Copy link</button>
+  </div>
+  <label for="badge-md">Badge for your README or docs footer</label>
+  <div class="field-row">
+    <input id="badge-md" type="text" readonly value="[![Docs health]({{ badge_url }})]({{ share_url }})">
+    <button type="button" class="secondary" data-copy="badge-md">Copy badge</button>
+  </div>
+  <p><a href="/">Scan another site</a></p>
+</section>
+{% endif %}
+{% endblock %}
+{% block scripts %}<script src="/static/report.js?v={{ version }}" defer></script>{% endblock %}

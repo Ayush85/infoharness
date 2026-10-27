@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="hero">
+  <div class="hero-copy">
+    <h1>Find the pages in your docs that contradict each other.</h1>
+    <p class="lede">Your support bot answers from your help center. When two pages disagree, it picks one at random. Paste your docs URL and see every conflict, duplicate and outdated page — in about two minutes.</p>
+    <form id="scan-form" class="scan-form" novalidate>
+      <label for="url">Docs or help center URL</label>
+      <div class="field-row">
+        <input id="url" name="url" type="text" inputmode="url" autocomplete="url" spellcheck="false"
+               placeholder="help.yourcompany.com" required>
+        <button type="submit" id="scan-btn">Scan my docs</button>
+      </div>
+      <p class="form-note" id="form-note">Free. No signup. Up to {{ max_pages }} pages.</p>
+    </form>
+  </div>
+
+  <figure class="specimen" aria-label="Example finding">
+    <figcaption>What a finding looks like</figcaption>
+    <div class="quote-pair">
+      <blockquote>
+        <p>You can request a full refund within <mark>14 days</mark> of purchase.</p>
+        <cite>/billing/refunds</cite>
+      </blockquote>
+      <div class="versus" aria-hidden="true"></div>
+      <blockquote>
+        <p>Refunds are available within <mark>30 days</mark> of purchase, no questions asked.</p>
+        <cite>/faq/payments</cite>
+      </blockquote>
+    </div>
+    <p class="specimen-note">Same question, two answers. A customer asking your AI gets either one.</p>
+  </figure>
+</section>
+
+<section class="checks">
+  <h2>What the scan looks for</h2>
+  <dl>
+    <div><dt>Contradictions</dt><dd>Different prices, limits, deadlines or steps for the same thing on different pages.</dd></div>
+    <div><dt>Duplicates</dt><dd>Pages and sections maintained in two places, where one copy drifts out of date.</dd></div>
+    <div><dt>Outdated pages</dt><dd>“Last updated 2019”, references to old versions, pages untouched for years.</dd></div>
+    <div><dt>Broken links</dt><dd>Links inside your docs that lead to errors or missing pages.</dd></div>
+    <div><dt>Thin and orphan pages</dt><dd>Placeholders and pages nothing links to — noise that AI search still finds.</dd></div>
+  </dl>
+</section>
+{% endblock %}
+{% block scripts %}<script src="/static/index.js?v={{ version }}" defer></script>{% endblock %}

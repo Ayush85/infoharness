@@ -1,0 +1,72 @@
+name: infoharness
+
+x-app-env: &app-env
+  env_file: .env
+  environment:
+    DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-harness}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@db:5432/${POSTGRES_DB:-infoharness}
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-infoharness}
+      POSTGRES_USER: ${POSTGRES_USER:-harness}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    mem_limit: 384m
+
+  app:
+    build: .
+    image: infoharness:latest
+    restart: unless-stopped
+    <<: *app-env
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:${APP_PORT:-8000}:8000"   # only reachable from this server (Caddy/nginx proxy in front)
+    mem_limit: 512m
+
+  worker:
+    image: infoharness:latest
+    restart: unless-stopped
+    <<: *app-env
+    command: ["python", "-m", "app.worker"]
+    depends_on:
+      db:
+        condition: service_healthy
+      app:
+        condition: service_started
+    healthcheck:
+      disable: true
+    mem_limit: 768m
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    profiles: ["caddy"]
+    environment:
+      DOMAIN: ${DOMAIN:?set DOMAIN in .env}
+      ACME_EMAIL: ${ACME_EMAIL:-}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - app
+    mem_limit: 128m
+
+volumes:
+  pgdata:
+  caddy_data:
+  caddy_config:

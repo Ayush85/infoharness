@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}About the infoharness crawler{% endblock %}
+{% block content %}
+<article class="prose">
+  <h1>About the infoharness crawler</h1>
+  <p>If you saw this in your server logs, someone asked infoharness to check the health of documentation on your site.</p>
+  <h2>What it does</h2>
+  <ul>
+    <li>Reads up to {{ max_pages }} public pages under the URL it was given, plus your sitemap.</li>
+    <li>Obeys <code>robots.txt</code>. It never logs in, submits forms or runs JavaScript.</li>
+    <li>Checks links found on those pages with a single lightweight request each.</li>
+  </ul>
+  <h2>How it identifies itself</h2>
+  <p>User agent: <code>{{ ua }}</code></p>
+  <h2>How to block it</h2>
+  <p>Add this to your <code>robots.txt</code>:</p>
+  <pre><code>User-agent: InfoharnessBot
+Disallow: /</code></pre>
+</article>
+{% endblock %}
