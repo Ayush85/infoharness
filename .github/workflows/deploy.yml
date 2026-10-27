@@ -17,8 +17,8 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.13"
           cache: pip
@@ -37,7 +37,7 @@ jobs:
       EMAIL: ${{ vars.DEPLOY_EMAIL }}
       EXTRA_ARGS: ${{ vars.DEPLOY_ARGS }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Check configuration
         run: |
@@ -71,6 +71,10 @@ jobs:
 
       - name: Upload code
         run: |
+          ssh server "mkdir -p '$DEPLOY_PATH' 2>/dev/null; test -w '$DEPLOY_PATH'" || {
+            echo "::error::User 'deploy' can't write to $DEPLOY_PATH on the server. Fix: sudo mkdir -p $DEPLOY_PATH && sudo chown -R deploy:deploy $DEPLOY_PATH  (or set the DEPLOY_PATH variable to /opt/infoharness)"
+            exit 1
+          }
           rsync -az --delete \
             --exclude '.git/' --exclude '.github/' --exclude '.env' --exclude '*.db' \
             --exclude '__pycache__/' --exclude '.pytest_cache/' \
