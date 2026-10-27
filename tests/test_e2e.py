@@ -30,6 +30,10 @@ def test_full_scan(env, docs_site):
     assert {p.rsplit("/", 1)[1] for p in dup["extra"]["pages"]} == {"setup.html", "setup-copy.html"}
     assert any("old-sdk" in i["page_a"] for i in types["stale"])
     assert any(i["page_b"].endswith("missing.html") for i in types["broken_link"])
+    miss = next(i for i in types["broken_link"] if i["page_b"].endswith("missing.html"))
+    assert miss["extra"]["contexts"][0]["text"] == "Missing"  # link text is kept for the report
+    assert any("action=edit" in i["page_b"] for i in types["admin_link"])
+    assert not any("google.com" in i["page_b"] for i in types["broken_link"])
     assert any(i["page_a"].endswith("thin.html") for i in types["thin_page"])
     assert any(i["page_a"].endswith("orphan.html") for i in types["orphan_page"])
     # Boilerplate footer must not produce duplicate-section noise
@@ -38,6 +42,7 @@ def test_full_scan(env, docs_site):
 
     html = client.get(f"/r/{scan_id}").text
     assert "Contradictions" in html and "14 days" in html
+    assert "link text" in html and "Copy URL" in html
     badge = client.get(f"/badge/{scan_id}.svg")
     assert badge.status_code == 200 and "docs health" in badge.text
 

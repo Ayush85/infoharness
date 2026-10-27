@@ -361,3 +361,9 @@ cite a { color: var(--muted); }
 .cta-inline p { color: #c3cddd; }
 .cta-inline .button { background: var(--paper); color: var(--ink); border-color: var(--paper); }
 .guide-list { margin-top: 28px; }
+
+.notice.coverage{background:var(--marker-soft,#fff7c2);border-left:3px solid var(--marker,#ffe45c);padding:.6rem .8rem;margin:.8rem 0;font-size:.92rem}
+.full-url{word-break:break-all;font-size:.85rem}
+.pages .ctx{color:var(--muted,#5b6675);font-size:.85rem;margin-left:.4rem}
+.pages .more{color:var(--muted,#5b6675)}
+.pages li.target{display:flex;flex-wrap:wrap;gap:.5rem;align-items:center}

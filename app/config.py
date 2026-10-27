@@ -40,10 +40,17 @@ class Settings:
 
     # Link checking
     check_external_links: bool = field(default_factory=lambda: _bool("CHECK_EXTERNAL_LINKS", True))
-    max_link_checks: int = field(default_factory=lambda: _int("MAX_LINK_CHECKS", 150))
+    max_link_checks: int = field(default_factory=lambda: _int("MAX_LINK_CHECKS", 400))
+    pro_max_link_checks: int = field(default_factory=lambda: _int("PRO_MAX_LINK_CHECKS", 3000))
+    link_check_seconds: int = field(default_factory=lambda: _int("LINK_CHECK_SECONDS", 240))
+
+    # Pro plan scan size (free scans use MAX_PAGES / MAX_SCAN_SECONDS)
+    pro_max_pages: int = field(default_factory=lambda: _int("PRO_MAX_PAGES", 2000))
+    pro_scan_seconds: int = field(default_factory=lambda: _int("PRO_SCAN_SECONDS", 1500))
 
     # Abuse protection
     scans_per_ip_per_day: int = field(default_factory=lambda: _int("SCANS_PER_IP_PER_DAY", 5))
+    scans_per_user_per_day: int = field(default_factory=lambda: _int("SCANS_PER_USER_PER_DAY", 20))
     max_queue: int = field(default_factory=lambda: _int("MAX_QUEUE", 50))
     cache_hours: int = field(default_factory=lambda: _int("CACHE_HOURS", 24))
     trust_proxy: bool = field(default_factory=lambda: _bool("TRUST_PROXY", False))

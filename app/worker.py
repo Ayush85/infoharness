@@ -29,7 +29,7 @@ def _handle_stop(*_):
 
 def recover_stuck() -> int:
     """Scans left 'running' by a crashed worker are marked failed so users aren't stuck waiting."""
-    cutoff = utcnow() - timedelta(seconds=config.settings.max_scan_seconds * 2)
+    cutoff = utcnow() - timedelta(seconds=max(config.settings.max_scan_seconds, config.settings.pro_scan_seconds) * 2)
     n = 0
     with session_scope() as s:
         for scan in s.scalars(select(Scan).where(Scan.status == "running")):

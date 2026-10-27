@@ -35,6 +35,8 @@ class Extracted:
     title: str = ""
     blocks: list[Block] = field(default_factory=list)
     links: list[str] = field(default_factory=list)
+    # absolute link target -> {"text": anchor text, "region": content|header|menu|footer|sidebar, "heading": nearest heading above it}
+    link_ctx: dict[str, dict] = field(default_factory=dict)
     last_modified: datetime | None = None
     word_count: int = 0
 
@@ -65,6 +67,39 @@ def _parse_date(value: str | None) -> datetime | None:
     return dt
 
 
+_REGION_BY_TAG = {"header": "header", "nav": "menu", "footer": "footer", "aside": "sidebar"}
+_REGION_BY_ROLE = {"banner": "header", "navigation": "menu", "contentinfo": "footer", "complementary": "sidebar"}
+_REGION_HINTS = (("footer", "footer"), ("header", "header"), ("banner", "header"), ("sidebar", "sidebar"),
+                 ("side-bar", "sidebar"), ("toc", "sidebar"), ("breadcrumb", "menu"), ("nav", "menu"), ("menu", "menu"))
+
+
+def _region(a: Tag) -> str:
+    """Where on the page a link sits: the page's own content, or shared template areas."""
+    depth = 0
+    for p in a.parents:
+        depth += 1
+        if depth > 14 or p.name in ("body", "html", "[document]"):
+            break
+        if p.name in _REGION_BY_TAG:
+            return _REGION_BY_TAG[p.name]
+        if p.get("role") in _REGION_BY_ROLE:
+            return _REGION_BY_ROLE[p.get("role")]
+        attrs = " ".join(filter(None, [p.get("id") or "", " ".join(p.get("class") or [])])).lower()
+        if attrs:
+            for word, region in _REGION_HINTS:
+                if re.search(rf"(^|[\s_-]){word}([\s_-]|$)", attrs):
+                    return region
+    return "content"
+
+
+def _anchor_text(a: Tag) -> str:
+    text = _clean(a.get_text(" "))
+    if not text:
+        img = a.find("img")
+        text = _clean((img.get("alt") if img else "") or a.get("aria-label") or a.get("title") or "")
+    return text[:120]
+
+
 def _is_chrome(tag: Tag) -> bool:
     if tag.get("role") in ("navigation", "banner", "contentinfo", "search", "complementary"):
         return True
@@ -85,9 +120,17 @@ def extract(html: str, base_url: str, header_last_modified: str | None = None) -
         if not href or href.startswith(("mailto:", "tel:", "javascript:", "#", "data:")):
             continue
         absolute = urldefrag(urljoin(base_url, href))[0]
+        region = _region(a)
         if absolute not in seen:
             seen.add(absolute)
             out.links.append(absolute)
+            h = a.find_previous(["h1", "h2", "h3", "h4"]) if region == "content" else None
+            out.link_ctx[absolute] = {"text": _anchor_text(a), "region": region,
+                                      "heading": _clean(h.get_text(" "))[:120] if h else ""}
+        elif region == "content" and out.link_ctx[absolute]["region"] != "content":
+            h = a.find_previous(["h1", "h2", "h3", "h4"])  # prefer the in-content occurrence over a menu one
+            out.link_ctx[absolute] = {"text": _anchor_text(a), "region": "content",
+                                      "heading": _clean(h.get_text(" "))[:120] if h else ""}
 
     # Title
     if soup.title and soup.title.string:

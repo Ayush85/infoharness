@@ -112,3 +112,14 @@ def test_thin_page_ignores_generated_and_code_pages():
     ]
     flagged = [f.page_a for f in check_thin_pages(pages)]
     assert flagged == ["https://d.io/en/latest/roadmap"]
+
+
+def test_bot_hostile_hosts_and_admin_links():
+    from app.crawler import is_bot_hostile
+    from app.analysis import admin_target_kind, check_orphans
+    assert is_bot_hostile("www.google.com") and is_bot_hostile("maps.google.co.uk") and is_bot_hostile("l.facebook.com")
+    assert not is_bot_hostile("docs.example.com") and not is_bot_hostile("notgoogle.org")
+    assert admin_target_kind("https://x.com/wp-admin/post.php?post=1&action=edit", "x.com")
+    assert admin_target_kind("https://staging.x.com/a", "x.com")
+    assert admin_target_kind("https://x.com/docs/a", "x.com") is None
+    assert check_orphans([], "https://x.com/", partial=True) == []

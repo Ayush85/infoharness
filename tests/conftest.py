@@ -42,7 +42,9 @@ def build_site(root: Path, base: str) -> None:
         "index.html": page("Acme Help Center", "<p>Welcome to the Acme help center. Find guides for billing, setup "
                           "and the API. Everything you need to get started with Acme is listed below.</p>",
                           '<ul><li><a href="old-sdk.html">Old SDK</a></li><li><a href="thin.html">Roadmap</a></li>'
-                          '<li><a href="setup-copy.html">Setup (copy)</a></li><li><a href="missing.html">Missing</a></li></ul>'),
+                          '<li><a href="setup-copy.html">Setup (copy)</a></li><li><a href="missing.html">Missing</a></li>'
+                          '<li><a href="/wp-admin/post.php?post=7&action=edit">Edit this page</a></li>'
+                          '<li><a href="https://www.google.com/maps/place/x">Our office</a></li></ul>'),
         "getting-started.html": page("Getting started", "<p>Create an account, invite your team and install the "
                                      "agent. Acme works with SDK v5 on Linux, macOS and Windows. Most teams finish "
                                      "setup in under ten minutes and can start sending data right away.</p>"),

@@ -70,8 +70,14 @@ class CrawlResult:
     # normalized target url -> set of normalized source page urls
     link_sources: dict[str, set[str]] = field(default_factory=dict)
     out_of_scope_links: set[str] = field(default_factory=set)
+    # target url -> source page url -> {"text", "region", "heading"} (capped per target)
+    link_ctx: dict[str, dict[str, dict]] = field(default_factory=dict)
+    # in-scope pages we found but did not read because of the page limit
+    overflow: set[str] = field(default_factory=set)
     sitemap_urls: set[str] = field(default_factory=set)
     stopped_reason: str = ""
+    links_checked: int = 0
+    links_skipped: int = 0
 
 
 class Crawler:
@@ -248,9 +254,12 @@ class Crawler:
 
     def _enqueue(self, queue: asyncio.Queue, url: str) -> None:
         n = normalize(url)
-        if n in self._queued or len(self._queued) >= self.max_pages:
+        if n in self._queued:
             return
         if not self.in_scope(n) or not self.allowed(n):
+            return
+        if len(self._queued) >= self.max_pages:
+            self.result.overflow.add(n)  # found, but over the page limit: counted so the report can say so
             return
         self._queued.add(n)
         queue.put_nowait(n)
@@ -282,6 +291,11 @@ class Crawler:
                         if ln == url:
                             continue
                         self.result.link_sources.setdefault(ln, set()).add(url)
+                        ctx = page.extracted.link_ctx.get(link)
+                        if ctx:
+                            per = self.result.link_ctx.setdefault(ln, {})
+                            if len(per) < 60:
+                                per[url] = ctx
                         if self.in_scope(ln):
                             self._enqueue(queue, ln)
                         else:
@@ -292,8 +306,23 @@ class Crawler:
                 queue.task_done()
 
 
-async def check_links(urls: list[str], *, limit: int, client: httpx.AsyncClient | None = None) -> dict[str, int]:
-    """HEAD (then GET) each URL; returns url -> status (0 = network error). 403/429 are reported as-is."""
+# Big platforms answer automated requests with errors (403, 404, 429, 999) even for working pages,
+# so a failure from them says nothing about the link. We don't report these as broken.
+BOT_HOSTILE = ("google.", "goo.gl", "g.co", "facebook.com", "fb.com", "fb.me", "instagram.com", "linkedin.com", "lnkd.in",
+               "twitter.com", "x.com", "t.co", "tiktok.com", "pinterest.", "whatsapp.com", "wa.me", "snapchat.com",
+               "amazon.", "amzn.to", "medium.com", "reddit.com", "quora.com", "t.me", "telegram.", "viber.com")
+
+
+def is_bot_hostile(host: str) -> bool:
+    h = (host or "").lower().rstrip(".")
+    return any(h == d.rstrip(".") or h.endswith("." + d.rstrip(".")) or (d.endswith(".") and (h.startswith(d) or ("." + d) in h))
+               for d in BOT_HOSTILE)
+
+
+async def check_links(urls: list[str], *, limit: int, client: httpx.AsyncClient | None = None,
+                      timeout_s: float | None = None) -> dict[str, int]:
+    """HEAD (then GET) each URL; returns url -> status (0 = network error). 403/429 are reported as-is.
+    Two requests per host at a time, one retry for errors that are often momentary, and an overall time budget."""
     s = config.settings
     own = client is None
     if own:
@@ -301,20 +330,35 @@ async def check_links(urls: list[str], *, limit: int, client: httpx.AsyncClient 
     crawler = Crawler.__new__(Crawler)
     crawler._client = client
     sem = asyncio.Semaphore(8)
+    per_host: dict[str, asyncio.Semaphore] = {}
     results: dict[str, int] = {}
+    refused = ("Blocked", "Private", "This address", "Could not resolve")
+
+    async def probe(u: str):
+        r = await crawler.fetch(u, method="HEAD", want_body=False)
+        if r.status in (0, 403, 405, 501) and not (r.error or "").startswith(refused):
+            r = await crawler.fetch(u, method="GET", want_body=False)
+        return r
 
     async def one(u: str):
-        async with sem:
-            r = await crawler.fetch(u, method="HEAD", want_body=False)
-            if r.status in (0, 403, 405, 501) and not (r.error or "").startswith(("Blocked", "Private", "This address", "Could not resolve")):
-                r = await crawler.fetch(u, method="GET", want_body=False)
+        host = urlsplit(u).hostname or ""
+        async with sem, per_host.setdefault(host, asyncio.Semaphore(2)):
+            r = await probe(u)
+            if (r.status == 0 or r.status >= 500) and not (r.error or "").startswith(refused):
+                await asyncio.sleep(1.5)  # one retry: timeouts and 5xx are often momentary
+                r = await probe(u)
             if r.error and r.status == 0 and ("private" in r.error.lower() or "blocked" in r.error.lower()):
                 return  # never report internal-network URLs
             results[u] = r.status
 
+    tasks = [asyncio.create_task(one(u)) for u in urls[:limit]]
     try:
-        await asyncio.gather(*(one(u) for u in urls[:limit]))
+        await asyncio.wait(tasks, timeout=timeout_s)
     finally:
+        for t in tasks:
+            if not t.done():
+                t.cancel()
+        await asyncio.gather(*tasks, return_exceptions=True)
         if own:
             await client.aclose()
     return results

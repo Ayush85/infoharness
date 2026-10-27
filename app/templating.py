@@ -30,6 +30,7 @@ TYPE_WHY = {
     "duplicate_page": "Two copies of one page. When only one gets updated, the other keeps giving the old answer.",
     "duplicate_section": "The same text lives in several places, and edits rarely reach every copy.",
     "stale": "Pages that say they are old, or describe a version the rest of the docs have moved past.",
+    "admin_link": "Links that point at an editing screen, a draft preview or a test server. Visitors can't open them, and they reveal how the site is built.",
     "broken_link": "Links that lead nowhere send readers, and crawlers, into dead ends.",
     "thin_page": "Near-empty pages still show up in search and in AI answers, and say nothing useful.",
     "orphan_page": "Nothing links to these pages, so nobody maintains them, yet search can still find them.",
@@ -48,8 +49,18 @@ def verdict(scan, issues) -> str:
 
 
 def issue_md(i, root: str = "") -> str:
-    where = " · ".join(p.replace(root, "/") if root else p for p in (i.page_a, i.page_b) if p)
     out = [f"- [ ] **{i.title}** ({i.severity})"]
+    if i.type in ("broken_link", "admin_link"):
+        out.append(f"  - URL: {i.page_b}")
+        ex = i.extra or {}
+        if ex.get("site_wide"):
+            out.append(f"  - In the site menu/header/footer, on {ex.get('sources_total')} pages: fix once in the template")
+        for c in (ex.get("contexts") or [])[:5]:
+            bits = [c["page"]] + ([f'link text "{c["text"]}"'] if c.get("text") else []) + \
+                   ([f'under "{c["heading"]}"'] if c.get("heading") else [])
+            out.append("  - Found on: " + " · ".join(bits))
+        return "\n".join(out)
+    where = " · ".join(p.replace(root, "/") if root else p for p in (i.page_a, i.page_b) if p)
     if where:
         out.append(f"  - Pages: {where}")
     for q in (i.quote_a, i.quote_b):

@@ -466,7 +466,38 @@ def check_thin_pages(pages: list[PageDoc], *, min_words: int = 30) -> list[Findi
     return out
 
 
-def check_orphans(pages: list[PageDoc], start_url: str) -> list[Finding]:
+ADMIN_URL = [
+    (re.compile(r"/wp-admin(/|$)", re.I), "the WordPress admin"),
+    (re.compile(r"/wp-login\.php", re.I), "the WordPress login"),
+    (re.compile(r"[?&]action=edit\b", re.I), "an edit screen"),
+    (re.compile(r"/node/\d+/edit", re.I), "an edit screen"),
+    (re.compile(r"[?&](preview|preview_id|preview_nonce)=", re.I), "a draft preview"),
+]
+TEST_HOST = re.compile(r"^(localhost|127\.0\.0\.1|\[::1\]|.+\.(local|localhost|test|internal))$", re.I)
+TEST_PREFIX = {"staging", "stage", "dev", "test", "preview", "uat", "qa"}
+
+
+def admin_target_kind(url: str, site_host: str) -> str | None:
+    """Return what a leaked link points at ('the WordPress admin', 'a test server'…) or None if it looks normal."""
+    p = urlsplit(url)
+    host = (p.hostname or "").lower()
+    if TEST_HOST.match(host) and host != (site_host or "").lower() and not TEST_HOST.match((site_host or "").lower()):
+        return "a local or test server"
+    site = site_host[4:] if site_host.startswith("www.") else site_host
+    if "." in host and host.split(".", 1)[0] in TEST_PREFIX and host.split(".", 1)[1] == site:
+        return "a staging server"
+    target = p.path + ("?" + p.query if p.query else "")
+    for rx, kind in ADMIN_URL:
+        if rx.search(target):
+            return kind
+    return None
+
+
+def check_orphans(pages: list[PageDoc], start_url: str, *, partial: bool = False) -> list[Finding]:
+    """`partial` = the crawl stopped before reading every page. Then "nothing links here" can't be known:
+    the pages that would link to it may simply be unread, so we report nothing instead of guessing."""
+    if partial:
+        return []
     linked = sum(1 for p in pages if p.inbound > 0)
     if linked < 5:
         return []  # not enough link structure to judge

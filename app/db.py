@@ -132,6 +132,15 @@ class SiteScan(Base):
     site_id: Mapped[int] = mapped_column(Integer, index=True)
 
 
+class ScanMeta(Base):
+    """Per-scan settings that depend on who asked (kept apart from `scans` so that table never changes shape)."""
+    __tablename__ = "scan_meta"
+
+    scan_id: Mapped[str] = mapped_column(String(32), primary_key=True)
+    user_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    max_pages: Mapped[int] = mapped_column(Integer)
+
+
 class Waitlist(Base):
     __tablename__ = "waitlist"
 

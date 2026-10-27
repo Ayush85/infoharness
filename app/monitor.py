@@ -7,7 +7,8 @@ from datetime import timedelta
 from sqlalchemy import select
 
 from app import config
-from app.db import Issue, Scan, Site, SiteScan, User, session_scope, utcnow
+from app.auth import effective_plan
+from app.db import Issue, Scan, ScanMeta, Site, SiteScan, User, session_scope, utcnow
 from app.mailer import send_email
 from app.scoring import TYPE_LABELS
 
@@ -35,6 +36,10 @@ def queue_due_scans(limit: int = 20) -> int:
             s.add(scan)
             s.flush()
             s.add(SiteScan(scan_id=scan.id, site_id=site.id))
+            owner = s.get(User, site.user_id)
+            pro = owner is not None and effective_plan(owner) == "pro"
+            s.add(ScanMeta(scan_id=scan.id, user_id=site.user_id,
+                           max_pages=config.settings.pro_max_pages if pro else config.settings.max_pages))
             site.last_scan_id = scan.id
             n += 1
     return n

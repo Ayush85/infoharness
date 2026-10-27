@@ -19,6 +19,7 @@ TYPE_LABELS = {
     "duplicate_section": "Repeated sections",
     "stale": "Outdated content",
     "broken_link": "Broken links",
+    "admin_link": "Admin and draft links",
     "thin_page": "Thin pages",
     "orphan_page": "Orphan pages",
 }

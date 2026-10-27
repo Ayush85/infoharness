@@ -10,9 +10,14 @@
     <p class="crumb"><a href="/">← Scan another site</a></p>
     <h1><a href="{{ scan.url }}" rel="nofollow noopener" target="_blank">{{ shown }}</a></h1>
     {% if scan.status == 'done' %}
-    <p class="report-meta">{{ scan.pages_crawled }} pages read{% if scan.finished_at %} on {{ scan.finished_at.strftime('%d %b %Y') }}{% endif %}.
-      {% if scan.summary.stopped_reason %}Stopped early: {{ scan.summary.stopped_reason }}.{% endif %}
+    <p class="report-meta">{{ scan.pages_crawled }} pages read{% if scan.summary.pages_found and scan.summary.pages_found > scan.pages_crawled %} of {{ scan.summary.pages_found }} found{% endif %}{% if scan.finished_at %} on {{ scan.finished_at.strftime('%d %b %Y') }}{% endif %}.
+      {% if scan.summary.links_checked %}{{ scan.summary.links_checked }} links checked.{% endif %}
       {% if not scan.summary.llm_verified %}Contradictions come from pattern matching, so give each a quick look before you act on it.{% endif %}</p>
+    {% if scan.summary.partial %}
+    <p class="notice coverage">This scan read {{ scan.pages_crawled }} of {{ scan.summary.pages_found or scan.pages_crawled }} pages we found, so it is a sample, not the whole site. Orphan pages are not reported for partial scans because we can't tell what the unread pages link to.
+      {% if me and me.plan != 'pro' %}<a href="/pricing">Pro scans up to 2,000 pages.</a>{% endif %}</p>
+    {% endif %}
+    {% if scan.summary.links_skipped %}<p class="notice coverage">{{ scan.summary.links_skipped }} links were not checked (large platforms such as Google, Facebook or LinkedIn block automated checks, or the link limit was reached).</p>{% endif %}
     <div class="report-actions">
       <button type="button" class="secondary" data-copy-text="{{ share_url }}">Copy report link</button>
       {% if report_md %}<button type="button" class="secondary" data-copy-from="report-md">Copy as Markdown</button>{% endif %}
@@ -84,9 +89,14 @@
           <ul class="pages">
             {% if i.extra and i.extra.pages %}
               {% for p in i.extra.pages %}<li><a href="{{ p }}" target="_blank" rel="nofollow noopener">{{ p|replace(scan.root, '/') }}</a></li>{% endfor %}
-            {% elif i.type == 'broken_link' %}
-              <li><span class="k">Broken link</span><a href="{{ i.page_b }}" target="_blank" rel="nofollow noopener">{{ i.page_b }}</a></li>
-              {% for p in (i.extra.sources or [])[:5] %}<li><span class="k">Found on</span><a href="{{ p }}" target="_blank" rel="nofollow noopener">{{ p|replace(scan.root, '/') }}</a></li>{% endfor %}
+            {% elif i.type in ('broken_link', 'admin_link') %}
+              <li class="target"><span class="k">{{ 'Broken URL' if i.type == 'broken_link' else 'URL' }}</span><code class="full-url">{{ i.page_b }}</code>
+                <button type="button" class="secondary small" data-copy-text="{{ i.page_b }}">Copy URL</button></li>
+              {% if i.extra.site_wide %}<li><span class="k">Where</span>In the site menu, header or footer: on {{ i.extra.sources_total }} pages. Fix it once in your template.</li>{% endif %}
+              {% for c in (i.extra.contexts or [])[:5] %}<li><span class="k">Found on</span><a href="{{ c.page }}" target="_blank" rel="nofollow noopener">{{ c.page }}</a>
+                <span class="ctx">{% if c.text %}link text "{{ c.text }}"{% endif %}{% if c.heading %} under "{{ c.heading }}"{% endif %}{% if c.region != 'content' %} ({{ c.region }}){% endif %}</span></li>{% endfor %}
+              {% if (i.extra.sources_total or 0) > 5 %}<li class="more">and {{ i.extra.sources_total - 5 }} more pages</li>{% endif %}
+              {% if not i.extra.contexts %}{% for p in (i.extra.sources or [])[:5] %}<li><span class="k">Found on</span><a href="{{ p }}" target="_blank" rel="nofollow noopener">{{ p }}</a></li>{% endfor %}{% endif %}
             {% else %}
               {% if i.page_a %}<li><a href="{{ i.page_a }}" target="_blank" rel="nofollow noopener">{{ i.page_a|replace(scan.root, '/') }}</a></li>{% endif %}
               {% if i.page_b %}<li><a href="{{ i.page_b }}" target="_blank" rel="nofollow noopener">{{ i.page_b|replace(scan.root, '/') }}</a></li>{% endif %}
