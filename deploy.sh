@@ -5,6 +5,7 @@
 #   sudo ./deploy.sh infoharness.com you@example.com --db host       # use the server's PostgreSQL (shared)
 #   sudo ./deploy.sh infoharness.com you@example.com --db bundled    # run a private Postgres container
 #   sudo ./deploy.sh infoharness.com "" --proxy none                 # nginx already owns ports 80/443
+#   sudo ./deploy.sh infoharness.com "" --proxy none --port 8730     # app on another local port
 #   sudo ./deploy.sh                                                 # update: rebuild + restart, same settings
 set -euo pipefail
 cd "$(dirname "$0")"
@@ -14,12 +15,13 @@ warn() { printf '\033[1;33m!!\033[0m %s\n' "$*"; }
 die()  { printf '\033[1;31mxx\033[0m %s\n' "$*" >&2; exit 1; }
 
 # ---------------------------------------------------------------- arguments
-DOMAIN_ARG=""; EMAIL_ARG=""; PROXY_ARG=""; DB_ARG=""
+DOMAIN_ARG=""; EMAIL_ARG=""; PROXY_ARG=""; DB_ARG=""; PORT_ARG=""
 positional=()
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --proxy) PROXY_ARG="${2:-}"; shift 2 ;;
     --db)    DB_ARG="${2:-}"; shift 2 ;;
+    --port)  PORT_ARG="${2:-}"; shift 2 ;;
     -h|--help) sed -n '2,9p' "$0"; exit 0 ;;
     *) positional+=("$1"); shift ;;
   esac
@@ -27,6 +29,7 @@ done
 DOMAIN_ARG="${positional[0]:-}"; EMAIL_ARG="${positional[1]:-}"
 [[ -z "$PROXY_ARG" || "$PROXY_ARG" =~ ^(caddy|none)$ ]] || die "--proxy must be caddy or none"
 [[ -z "$DB_ARG" || "$DB_ARG" =~ ^(host|bundled)$ ]] || die "--db must be host or bundled"
+[[ -z "$PORT_ARG" || "$PORT_ARG" =~ ^[0-9]{2,5}$ ]] || die "--port must be a number"
 
 set_env() {  # set_env KEY VALUE  -> replaces or appends in .env
   local key="$1" val="$2"
@@ -63,6 +66,7 @@ if [[ -n "$DOMAIN_ARG" ]]; then
 fi
 [[ -n "$EMAIL_ARG" ]] && set_env ACME_EMAIL "$EMAIL_ARG"
 [[ -n "$PROXY_ARG" ]] && set_env PROXY_MODE "$PROXY_ARG"
+[[ -n "$PORT_ARG" ]] && set_env APP_PORT "$PORT_ARG"
 
 DOMAIN="$(get_env DOMAIN)"
 PROXY_MODE="$(get_env PROXY_MODE)"; PROXY_MODE="${PROXY_MODE:-caddy}"
