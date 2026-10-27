@@ -21,7 +21,7 @@ from app.crawler import normalize
 from app.db import Issue, Scan, init_engine, session_scope, utcnow
 from app.auth import client_hash
 from app.scoring import TYPE_LABELS
-from app.templating import templates
+from app.templating import report_md, templates, verdict
 from app import accounts
 from app.security import UnsafeURL, check_url_safe, normalize_input_url
 
@@ -78,6 +78,7 @@ def report(request: Request, scan_id: str):
         for i in issues:
             grouped.setdefault(i.type, []).append(i)
         ctx = {"scan": scan, "grouped": [(t, grouped[t]) for t in TYPE_LABELS if t in grouped],
+               "verdict": verdict(scan, issues), "total": len(issues), "report_md": report_md(scan, [(t, grouped[t]) for t in TYPE_LABELS if t in grouped]) if issues else "",
                "share_url": f"{config.settings.public_base_url}/r/{scan.id}",
                "badge_url": f"{config.settings.public_base_url}/badge/{scan.id}.svg"}
         return templates.TemplateResponse(request, "report.html", ctx)

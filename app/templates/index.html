@@ -1,46 +1,95 @@
 {% extends "base.html" %}
+{% macro scan_form(id, button="Scan my docs") %}
+<form class="scan-form" data-scan-form novalidate>
+  <label for="url-{{ id }}" class="sr-only">Docs or help center URL</label>
+  <div class="field-row">
+    <input id="url-{{ id }}" name="url" type="text" inputmode="url" autocomplete="url" spellcheck="false" autocapitalize="off"
+           placeholder="help.yourcompany.com" required>
+    <button type="submit">{{ button }}</button>
+  </div>
+  <p class="form-note" data-note>Free. No signup. Reads up to {{ max_pages }} pages.</p>
+</form>
+{% endmacro %}
 {% block content %}
 <section class="hero">
-  <div class="hero-copy">
-    <h1>Find the pages in your docs that contradict each other.</h1>
-    <p class="lede">Your support bot answers from your help center. When two pages disagree, it picks one at random. Paste your docs URL and see every conflict, duplicate and outdated page — in about two minutes.</p>
-    <form id="scan-form" class="scan-form" novalidate>
-      <label for="url">Docs or help center URL</label>
-      <div class="field-row">
-        <input id="url" name="url" type="text" inputmode="url" autocomplete="url" spellcheck="false"
-               placeholder="help.yourcompany.com" required>
-        <button type="submit" id="scan-btn">Scan my docs</button>
+  <div class="wrap">
+    <div>
+      <h1>Your docs disagree with themselves.</h1>
+      <p class="lede">Paste your help center address. In about two minutes you get a graded list of the pages that contradict, repeat or outdate each other, the ones that make your support bot answer wrong.</p>
+      {{ scan_form("hero") }}
+      <div class="examples">
+        <span>No docs handy? Try</span>
+        <button type="button" class="chip-link" data-example="docs.python-requests.org/en/latest/">Requests</button>
+        <button type="button" class="chip-link" data-example="fastapi.tiangolo.com">FastAPI</button>
+        <button type="button" class="chip-link" data-example="flask.palletsprojects.com/en/stable/">Flask</button>
       </div>
-      <p class="form-note" id="form-note">Free. No signup. Up to {{ max_pages }} pages.</p>
-    </form>
-  </div>
-
-  <figure class="specimen" aria-label="Example finding">
-    <figcaption>What a finding looks like</figcaption>
-    <div class="quote-pair">
-      <blockquote>
-        <p>You can request a full refund within <mark>14 days</mark> of purchase.</p>
-        <cite>/billing/refunds</cite>
-      </blockquote>
-      <div class="versus" aria-hidden="true"></div>
-      <blockquote>
-        <p>Refunds are available within <mark>30 days</mark> of purchase, no questions asked.</p>
-        <cite>/faq/payments</cite>
-      </blockquote>
     </div>
-    <p class="specimen-note">Same question, two answers. A customer asking your AI gets either one.</p>
-  </figure>
+
+    <figure class="redline" aria-label="Example of two help pages that disagree" style="margin:0">
+      <div class="redline-bar"><i></i><i></i><i></i><span>What a scan finds</span></div>
+      <div class="doc">
+        <h3>/billing/refunds</h3>
+        <p>You can request a full refund within <span class="circled"><svg viewBox="0 0 100 40" preserveAspectRatio="none" aria-hidden="true"><path pathLength="1" d="M6 24 C 4 8, 70 -2, 94 10 C 104 20, 60 42, 14 34 C 2 30, 8 18, 20 14"/></svg>14 days</span> of purchase.</p>
+      </div>
+      <div class="gap"><span class="vs">These disagree</span></div>
+      <div class="doc">
+        <h3>/faq/payments</h3>
+        <p>Refunds are available within <span class="circled second"><svg viewBox="0 0 100 40" preserveAspectRatio="none" aria-hidden="true"><path pathLength="1" d="M6 24 C 4 8, 70 -2, 94 10 C 104 20, 60 42, 14 34 C 2 30, 8 18, 20 14"/></svg>30 days</span>, no questions asked.</p>
+      </div>
+      <p class="redline-foot">Same question, two answers. Your AI assistant quotes whichever page it finds first.</p>
+    </figure>
+  </div>
 </section>
 
-<section class="checks">
-  <h2>What the scan looks for</h2>
-  <dl>
-    <div><dt>Contradictions</dt><dd>Different prices, limits, deadlines or steps for the same thing on different pages.</dd></div>
-    <div><dt>Duplicates</dt><dd>Pages and sections maintained in two places, where one copy drifts out of date.</dd></div>
-    <div><dt>Outdated pages</dt><dd>“Last updated 2019”, references to old versions, pages untouched for years.</dd></div>
-    <div><dt>Broken links</dt><dd>Links inside your docs that lead to errors or missing pages.</dd></div>
-    <div><dt>Thin and orphan pages</dt><dd>Placeholders and pages nothing links to — noise that AI search still finds.</dd></div>
-  </dl>
+<section class="section" id="checks">
+  <div class="wrap">
+    <div class="section-head">
+      <h2>What every scan checks</h2>
+      <p>Seven checks, each with its own list of exact pages and quotes, so you know what to open and what to change.</p>
+    </div>
+    <table class="ledger">
+      <thead><tr><th scope="col">Check</th><th scope="col">What we flag</th><th scope="col">Looks like</th></tr></thead>
+      <tbody>
+        <tr><th scope="row">Contradictions</th><td>Different prices, limits, deadlines or steps for the same fact on different pages.</td><td class="eg"><s>14 days</s> on one page, 30 days on another</td></tr>
+        <tr><th scope="row">Duplicate pages</th><td>Two pages that say almost the same thing, so one will drift out of date.</td><td class="eg">“Setup guide” and “Setup guide (copy)”</td></tr>
+        <tr><th scope="row">Repeated sections</th><td>The same paragraph pasted into several articles.</td><td class="eg">A warning copied into 12 pages</td></tr>
+        <tr><th scope="row">Outdated content</th><td>Pages that date themselves, or describe a version nobody else mentions.</td><td class="eg">“Last updated: March 2019”</td></tr>
+        <tr><th scope="row">Broken links</th><td>Links inside your docs that return an error.</td><td class="eg">/docs/pricing → 404</td></tr>
+        <tr><th scope="row">Thin pages</th><td>Placeholders and near-empty pages that search still finds.</td><td class="eg">“Coming soon.”</td></tr>
+        <tr><th scope="row">Orphan pages</th><td>Pages listed in your sitemap that no other page links to.</td><td class="eg">/docs/data-retention</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="section" id="how">
+  <div class="wrap">
+    <div class="section-head"><h2>How it works</h2></div>
+    <ol class="steps">
+      <li><h3>Paste an address</h3><p>Your docs or help center URL. No account, no install, nothing to configure.</p></li>
+      <li><h3>We read the public pages</h3><p>The crawler follows your sitemap and links, obeys robots.txt and stays inside the docs folder you gave it.</p></li>
+      <li><h3>Fix what matters first</h3><p>You get a grade, every finding with quotes and page links, and a badge to show when it's clean.</p></li>
+    </ol>
+  </div>
+</section>
+
+<section class="section" id="faq">
+  <div class="wrap">
+    <div class="section-head"><h2>Questions</h2></div>
+    <div class="faq">
+      <details><summary>Does it read private or logged-in pages?</summary><p>No. It only reads pages anyone can open without signing in. Docs behind a login can't be scanned yet.</p></details>
+      <details><summary>Will it work on my site?</summary><p>It works on any docs or help center that serves its text as HTML, which covers most platforms. Sites that only draw their content with JavaScript show up as unreadable.</p></details>
+      <details><summary>How are contradictions found?</summary><p>By comparing the numbers, limits and dates that pages state about the same thing. Each finding shows both quotes side by side so you can judge it in seconds. Switching on AI verification also catches contradictions in wording.</p></details>
+      <details><summary>Who can see my report?</summary><p>Anyone who has the link. Reports are not listed anywhere and are hidden from search engines.</p></details>
+      <details><summary>What does it cost?</summary><p>Scanning is free. <a href="/pricing">Pro</a> watches your docs on a schedule and emails you when something new breaks.</p></details>
+      <details><summary>Can I stop the crawler?</summary><p>Yes. Add <code>InfoharnessBot</code> to your robots.txt. <a href="/bot#block">Here's how.</a></p></details>
+    </div>
+
+    <div class="cta-band">
+      <h2>Find out what your docs say to an AI assistant.</h2>
+      {{ scan_form("cta") }}
+    </div>
+  </div>
 </section>
 {% endblock %}
 {% block scripts %}<script src="/static/index.js?v={{ version }}" defer></script>{% endblock %}

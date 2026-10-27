@@ -1,16 +1,16 @@
 {% extends "base.html" %}
-{% block title %}Sign in — infoharness{% endblock %}
+{% block title %}Sign in · infoharness{% endblock %}
 {% block content %}
-<section class="prose narrow">
+<div class="wrap page"><div class="page-narrow">
   <h1>Sign in</h1>
-  <p class="lede">No password. We email you a one-time link. New here? The same link creates your account.</p>
-  <form method="post" action="/login" class="scan-form">
-    <label for="email">Email</label>
+  <p class="lede">No password to remember. We email you a one-time link, and the same link creates your account the first time.</p>
+  <form method="post" action="/login" class="scan-form panel" style="margin-top:28px">
+    <label for="email">Email address</label>
     <div class="field-row">
-      <input id="email" name="email" type="text" inputmode="email" autocomplete="email" placeholder="you@company.com" required>
+      <input id="email" name="email" type="text" inputmode="email" autocomplete="email" autocapitalize="off" spellcheck="false" placeholder="you@company.com" required>
       <button type="submit">Email me a link</button>
     </div>
-    {% if error %}<p class="form-note is-error">{{ error }}</p>{% endif %}
+    {% if error %}<p class="form-note is-error" role="alert">{{ error }}</p>{% else %}<p class="form-note">The link works once and expires in 15 minutes.</p>{% endif %}
   </form>
-</section>
+</div></div>
 {% endblock %}

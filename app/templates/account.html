@@ -1,47 +1,56 @@
 {% extends "base.html" %}
-{% block title %}Your account — infoharness{% endblock %}
+{% block title %}My sites · infoharness{% endblock %}
 {% block content %}
-<section class="prose">
-  <h1>Your watched sites</h1>
-  <p>Signed in as <strong>{{ me.email }}</strong> · plan: <strong>{{ me.plan|upper }}</strong>
-    {% if me.plan != 'pro' %}· <a href="/pricing">Upgrade</a>{% endif %}</p>
-  {% if msg %}<p class="form-note">{{ msg }}</p>{% endif %}
-  {% if err %}<p class="form-note is-error">{{ err }}</p>{% endif %}
+<div class="wrap page">
+  <h1>My sites</h1>
+  <p class="lede" style="font-size:1rem">Signed in as <strong>{{ me.email }}</strong> on the <strong>{{ 'Pro' if me.plan == 'pro' else 'Free' }}</strong> plan.
+    {% if me.plan != 'pro' %}<a href="/pricing">See Pro</a>{% endif %}</p>
+  {% if msg %}<p class="flash" role="status">{{ msg }}</p>{% endif %}
+  {% if err %}<p class="flash error" role="alert">{{ err }}</p>{% endif %}
 
   {% if sites %}
-  <table class="plans">
-    <thead><tr><th>Site</th><th>Grade</th><th>Schedule</th><th>Next scan</th><th></th></tr></thead>
-    <tbody>
+  <ul class="sites">
     {% for s in sites %}
-      <tr>
-        <td>{{ s.url }}</td>
-        <td>{% if s.last_scan_id and s.last_status == 'done' %}<a href="/r/{{ s.last_scan_id }}">{{ s.last_grade }}</a>
-            {% elif s.last_status == 'failed' %}failed: {{ s.last_error }}{% else %}pending…{% endif %}</td>
-        <td>{{ intervals.get(s.interval_days, s.interval_days) }}</td>
-        <td>{{ s.next_run_at.strftime('%b %d') }}</td>
-        <td>
-          <form method="post" action="/account/sites/{{ s.id }}/scan" style="display:inline"><button class="secondary" type="submit">Scan now</button></form>
-          <form method="post" action="/account/sites/{{ s.id }}/delete" style="display:inline"><button class="secondary" type="submit">Remove</button></form>
-        </td>
-      </tr>
+    <li class="site">
+      {% if s.last_status == 'done' and s.last_scan_id %}
+        <a class="grade-chip g-{{ s.last_grade|lower }}" href="/r/{{ s.last_scan_id }}" aria-label="Grade {{ s.last_grade }}. Open report">{{ s.last_grade }}</a>
+      {% else %}<span class="grade-chip g-none" aria-label="{{ 'Last scan failed' if s.last_status == 'failed' else 'First scan pending' }}">{{ '!' if s.last_status == 'failed' else '…' }}</span>{% endif %}
+      <div>
+        <div class="site-url">{{ s.url|replace('https://','')|replace('http://','') }}</div>
+        <div class="site-meta">
+          {% if s.last_status == 'failed' %}Last scan failed: {{ (s.last_error or 'unknown error')|trim('.') }}.
+          {% elif s.last_status == 'pending' %}First scan is queued; we'll email you the result.
+          {% else %}Score {{ s.last_score|round|int }} / 100.{% endif %}
+          Rescans {{ intervals.get(s.interval_days, s.interval_days) }}, next on {{ s.next_run_at.strftime('%d %b') }}.
+        </div>
+      </div>
+      <div class="site-actions">
+        <form method="post" action="/account/sites/{{ s.id }}/scan"><button class="secondary small" type="submit">Scan now</button></form>
+        <form method="post" action="/account/sites/{{ s.id }}/delete"><button class="secondary small danger" type="submit">Stop watching</button></form>
+      </div>
+    </li>
     {% endfor %}
-    </tbody>
-  </table>
+  </ul>
+  {% else %}
+  <div class="empty">
+    <h2>No sites yet</h2>
+    <p>Add the docs you want watched. We scan right away, then rescan on your schedule and email you when something new breaks.</p>
+  </div>
   {% endif %}
 
   {% if sites|length < limit %}
-  <form method="post" action="/account/sites" class="scan-form">
-    <label for="url">Add a docs site ({{ sites|length }} of {{ limit }} used)</label>
+  <form method="post" action="/account/sites" class="scan-form panel">
+    <label for="url">Watch a docs site <span style="font-weight:500;color:var(--muted)">({{ sites|length }} of {{ limit }} used)</span></label>
     <div class="field-row">
       <input id="url" name="url" type="text" inputmode="url" placeholder="help.yourcompany.com" required>
-      <select name="interval" aria-label="How often">
-        {% for d in allowed %}<option value="{{ d }}">{{ intervals[d] }}</option>{% endfor %}
+      <select name="interval" aria-label="How often to rescan">
+        {% for d in allowed %}<option value="{{ d }}">Rescan {{ intervals[d] }}</option>{% endfor %}
       </select>
-      <button type="submit">Watch this site</button>
+      <button type="submit">Watch site</button>
     </div>
   </form>
-  {% else %}<p class="form-note">You are using all {{ limit }} watched sites on your plan.</p>{% endif %}
+  {% else %}<p class="form-note">You're using all {{ limit }} watched site{{ 's' if limit != 1 }} on your plan. {% if me.plan != 'pro' %}<a href="/pricing">Upgrade for more</a>{% endif %}</p>{% endif %}
 
-  <form method="post" action="/logout"><button class="secondary" type="submit">Sign out</button></form>
-</section>
+  <form method="post" action="/logout" style="margin-top:36px"><button class="secondary" type="submit">Sign out</button></form>
+</div>
 {% endblock %}

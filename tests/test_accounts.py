@@ -135,6 +135,6 @@ def test_webhook_disabled_without_secret(env):
 
 def test_pricing_and_waitlist(env):
     c = TestClient(app)
-    assert "Pro is almost ready" in c.get("/pricing").text
+    assert "Pro opens soon" in c.get("/pricing").text
     r = c.post("/pricing/waitlist", data={"email": "me@example.com"})
     assert "on the list" in r.text

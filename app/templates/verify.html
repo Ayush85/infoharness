@@ -1,11 +1,12 @@
 {% extends "base.html" %}
-{% block title %}Confirm sign-in — infoharness{% endblock %}
+{% block title %}Confirm sign-in · infoharness{% endblock %}
 {% block content %}
-<section class="prose narrow">
-  <h1>Confirm sign-in</h1>
-  <form method="post" action="/login/verify">
+<div class="wrap page"><div class="page-narrow">
+  <h1>Almost there</h1>
+  <p class="lede">Confirm to finish signing in on this device.</p>
+  <form method="post" action="/login/verify" style="margin-top:24px">
     <input type="hidden" name="token" value="{{ token }}">
     <button type="submit">Sign in to infoharness</button>
   </form>
-</section>
+</div></div>
 {% endblock %}

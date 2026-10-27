@@ -3,30 +3,54 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>{% block title %}infoharness — check your docs before your AI reads them{% endblock %}</title>
-<meta name="description" content="{% block description %}Scan a help center or docs site for contradictions, duplicates, outdated pages and broken links — the things that make AI assistants give wrong answers.{% endblock %}">
+<title>{% block title %}infoharness — find the pages in your docs that contradict each other{% endblock %}</title>
+{% set desc %}{% block description %}Paste your help center URL and get a graded report of contradictions, duplicates, outdated pages and broken links, the problems that make AI assistants answer wrong.{% endblock %}{% endset %}
+<meta name="description" content="{{ desc|trim }}">
+<meta name="theme-color" content="#f6f7f9" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0d1522" media="(prefers-color-scheme: dark)">
+<meta property="og:site_name" content="infoharness">
+<meta property="og:type" content="website">
+<meta property="og:title" content="{% block ogtitle %}infoharness: does your documentation contradict itself?{% endblock %}">
+<meta property="og:description" content="{{ desc|trim }}">
+<meta property="og:image" content="{{ settings().public_base_url }}/static/og.png">
+<meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..100,400..800&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&display=swap" rel="stylesheet">
+<link rel="preload" href="/static/fonts/schibsted-grotesk-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/static/app.css?v={{ version }}">
 {% block head %}{% endblock %}
 </head>
 <body>
+<a class="skip" href="#main">Skip to content</a>
 <header class="site-head">
-  <a class="wordmark" href="/" aria-label="infoharness home">info<span>harness</span></a>
-  <nav>
-    <a href="/pricing">Pricing</a>
-    {% if me %}<a href="/account">Account</a>{% else %}<a href="/login">Sign in</a>{% endif %}
-    <a href="/bot">About the crawler</a>
-  </nav>
+  <div class="wrap">
+    <a class="wordmark" href="/" aria-label="infoharness home"><img src="/static/favicon.svg" alt="" width="28" height="28">infoharness</a>
+    {% set path = request.url.path %}
+    <nav class="main-nav" aria-label="Main">
+      <a href="/#how" >How it works</a>
+      <a href="/pricing" {% if path == '/pricing' %}aria-current="page"{% endif %}>Pricing</a>
+      {% if me %}<a class="nav-cta" href="/account">My sites</a>{% else %}<a class="keep" href="/login" {% if path == '/login' %}aria-current="page"{% endif %}>Sign in</a>{% endif %}
+    </nav>
+  </div>
 </header>
 <main id="main">
 {% block content %}{% endblock %}
 </main>
 <footer class="site-foot">
-  <p>infoharness reads public pages only, respects robots.txt and never executes scripts.</p>
-  <p><a href="/bot">How the crawler works</a></p>
+  <div class="wrap">
+    <div>
+      <a class="wordmark" href="/"><img src="/static/favicon.svg" alt="" width="28" height="28">infoharness</a>
+      <p style="margin-top:12px">Finds the pages in your docs that disagree with each other, before your customers or your AI assistant do.</p>
+      <p class="fine">Reads public pages only, respects robots.txt and never runs scripts.</p>
+    </div>
+    <div>
+      <h2>Product</h2>
+      <ul><li><a href="/">Scan a site</a></li><li><a href="/pricing">Pricing</a></li><li><a href="/login">Sign in</a></li></ul>
+    </div>
+    <div>
+      <h2>Crawler</h2>
+      <ul><li><a href="/bot">About InfoharnessBot</a></li><li><a href="/bot#block">Block the crawler</a></li></ul>
+    </div>
+  </div>
 </footer>
 {% block scripts %}{% endblock %}
 </body>

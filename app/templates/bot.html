@@ -1,20 +1,23 @@
 {% extends "base.html" %}
-{% block title %}About the infoharness crawler{% endblock %}
+{% block title %}About InfoharnessBot · infoharness{% endblock %}
 {% block content %}
-<article class="prose">
-  <h1>About the infoharness crawler</h1>
-  <p>If you saw this in your server logs, someone asked infoharness to check the health of documentation on your site.</p>
-  <h2>What it does</h2>
-  <ul>
-    <li>Reads up to {{ max_pages }} public pages under the URL it was given, plus your sitemap.</li>
-    <li>Obeys <code>robots.txt</code>. It never logs in, submits forms or runs JavaScript.</li>
-    <li>Checks links found on those pages with a single lightweight request each.</li>
-  </ul>
-  <h2>How it identifies itself</h2>
-  <p>User agent: <code>{{ ua }}</code></p>
-  <h2>How to block it</h2>
-  <p>Add this to your <code>robots.txt</code>:</p>
-  <pre><code>User-agent: InfoharnessBot
+<div class="wrap page">
+  <article class="prose">
+    <h1>About the infoharness crawler</h1>
+    <p class="lede">If you found this in your server logs, someone asked infoharness to check the documentation on your site for contradictions and broken links.</p>
+    <h2>What it does</h2>
+    <ul>
+      <li>Reads up to {{ max_pages }} public pages under the address it was given, plus your sitemap.</li>
+      <li>Obeys <code>robots.txt</code>. It never logs in, submits forms or runs JavaScript.</li>
+      <li>Checks each link it finds with one lightweight request.</li>
+      <li>Keeps a polite pace: a handful of requests at a time, with timeouts and size limits.</li>
+    </ul>
+    <h2>How it identifies itself</h2>
+    <p>User agent: <code>{{ ua }}</code></p>
+    <h2 id="block">How to block it</h2>
+    <p>Add this to your <code>robots.txt</code> and it will skip your whole site:</p>
+    <pre><code>User-agent: InfoharnessBot
 Disallow: /</code></pre>
-</article>
+  </article>
+</div>
 {% endblock %}
