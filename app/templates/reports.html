@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Docs health reports for public documentation sites · infoharness{% endblock %}
+{% block description %}The latest documentation health grade, A to F, for every documentation site and help center scanned on infoharness, with contradictions, duplicates and broken links counted.{% endblock %}
+{% block canonical %}{{ settings().public_base_url }}/reports{% if page > 1 %}?page={{ page }}{% endif %}{% endblock %}
+{% block content %}
+<div class="wrap page">
+  <h1>Public docs health reports</h1>
+  <p class="lede">The most recent grade for each documentation site scanned here. Want yours removed? Email us from your site's domain. Want it blocked entirely? <a href="/bot#block">Block InfoharnessBot</a>.</p>
+  {% if rows %}
+  <table class="ledger">
+    <thead><tr><th>Site</th><th>Grade</th><th>Score</th><th>Issues</th><th>Pages</th><th>Scanned</th></tr></thead>
+    <tbody>{% for r in rows %}<tr><td><a href="/r/{{ r.id }}">{{ r.host }}</a></td><td>{{ r.grade }}</td><td>{{ r.score }}</td><td>{{ r.issues }}</td><td>{{ r.pages }}</td><td>{{ r.when.strftime('%d %b %Y') }}</td></tr>{% endfor %}</tbody>
+  </table>
+  <p>{% if page > 1 %}<a href="/reports?page={{ page - 1 }}">← Newer</a>{% endif %} {% if more %}<a href="/reports?page={{ page + 1 }}">Older →</a>{% endif %}</p>
+  {% else %}<p>No public reports yet. <a href="/">Scan a site</a> to add the first one.</p>{% endif %}
+</div>
+{% endblock %}

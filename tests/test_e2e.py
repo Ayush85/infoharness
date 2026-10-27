@@ -74,3 +74,17 @@ def test_vanity_domain_redirect_is_followed(env, docs_site, redirect_site):
     assert data["status"] == "done", data
     assert data["pages_crawled"] >= 8
     assert any(i["type"] == "contradiction" for i in data["issues"])
+
+
+def test_public_reports_are_indexable(env, docs_site):
+    from fastapi.testclient import TestClient
+    from app.main import app
+    from app import worker
+    client = TestClient(app)
+    sid = client.post("/api/scans", json={"url": f"{docs_site}/docs"}).json()["id"]
+    assert worker.run_once() is True
+    html = client.get(f"/r/{sid}").text
+    assert 'content="noindex' not in html and f"/r/{sid}" in html and "application/ld+json" in html
+    assert sid in client.get("/sitemap.xml").text
+    assert "Disallow: /r/" not in client.get("/robots.txt").text
+    assert "docs_site" in client.get("/reports").text or "127.0.0.1" in client.get("/reports").text

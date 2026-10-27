@@ -4,7 +4,10 @@ from __future__ import annotations
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, PlainTextResponse, Response
 
+from sqlalchemy import func, select
+
 from app import config
+from app.db import Scan, session_scope
 from app.templating import templates
 
 router = APIRouter()
@@ -27,7 +30,7 @@ FAQS = [
     ("Does it read private or logged-in pages?", "No. It only reads pages anyone can open without signing in. Documentation behind a login can't be scanned yet.", None),
     ("Will it work on my site?", "It works on any documentation site or help center that serves its text as HTML, which covers most platforms. Sites that only draw their content with JavaScript show up as unreadable.", None),
     ("How are contradictions found?", "By comparing the numbers, limits and dates that different pages state about the same thing. Each finding shows both quotes side by side so you can judge it in seconds.", ("Read the guide", "/guides/contradictory-docs-ai-assistants")),
-    ("Who can see my report?", "Anyone who has the link. Reports are not listed anywhere and are hidden from search engines.", None),
+    ("Who can see my report?", "Anyone who has the link. Reports of publicly scanned sites also appear in the public reports list and in search results, so teams can compare. Reports for sites monitored from an account stay private. To remove a report, email us from the site's domain.", None),
     ("What does it cost?", "Scanning is free. The Pro plan watches your docs on a schedule and emails you when something new breaks.", ("See pricing", "/pricing")),
     ("Can I stop the crawler?", "Yes. Add InfoharnessBot to your robots.txt and it will skip your whole site.", ("How to block it", "/bot#block")),
 ]
@@ -49,12 +52,48 @@ def home_jsonld() -> dict:
 
 
 BY_SLUG = {g["slug"]: g for g in GUIDES}
-PRIVATE = ("/r/", "/api/", "/account", "/login", "/logout", "/webhooks/")
-STATIC_URLS = ["/", "/pricing", "/guides", "/bot"]
+PRIVATE = ("/api/", "/account", "/login", "/logout", "/webhooks/")
+STATIC_URLS = ["/", "/pricing", "/guides", "/reports", "/bot"]
 
 
 def _base() -> str:
     return config.settings.public_base_url
+
+
+MIN_PUBLIC_PAGES = 5
+
+
+def public_reports(limit: int = 200, offset: int = 0) -> list[dict]:
+    """Latest finished report per site, for sites anyone could scan. Watched (account) scans are never listed."""
+    with session_scope() as s:
+        latest = (select(Scan.url, func.max(Scan.created_at).label("m")).where(
+            Scan.status == "done", ~Scan.client_hash.like("site:%"), Scan.pages_crawled >= MIN_PUBLIC_PAGES)
+            .group_by(Scan.url).subquery())
+        rows = s.scalars(select(Scan).join(latest, (Scan.url == latest.c.url) & (Scan.created_at == latest.c.m))
+                         .where(~Scan.client_hash.like("site:%")).order_by(Scan.created_at.desc())
+                         .limit(limit).offset(offset)).all()
+        return [{"id": r.id, "url": r.url, "host": r.url.split("//")[-1].rstrip("/"), "grade": r.grade,
+                 "score": round(r.score or 0), "pages": r.pages_crawled,
+                 "issues": (r.summary or {}).get("total_issues", 0), "when": r.finished_at or r.created_at}
+                for r in rows]
+
+
+def is_public_latest(scan) -> bool:
+    """True when this report may be indexed: finished, from a public scan, and the newest for its site."""
+    if scan.status != "done" or (scan.client_hash or "").startswith("site:") or (scan.pages_crawled or 0) < MIN_PUBLIC_PAGES:
+        return False
+    with session_scope() as s:
+        newest = s.scalar(select(Scan.id).where(Scan.url == scan.url, Scan.status == "done",
+                                                ~Scan.client_hash.like("site:%"))
+                          .order_by(Scan.created_at.desc()).limit(1))
+    return newest == scan.id
+
+
+@router.get("/reports", response_class=HTMLResponse)
+def reports(request: Request, page: int = 1):
+    page = max(1, page)
+    rows = public_reports(101, (page - 1) * 100)
+    return templates.TemplateResponse(request, "reports.html", {"rows": rows[:100], "page": page, "more": len(rows) > 100})
 
 
 @router.get("/robots.txt", response_class=PlainTextResponse)
@@ -68,6 +107,8 @@ def robots():
 def sitemap():
     urls = STATIC_URLS + [f"/guides/{g['slug']}" for g in GUIDES]
     body = "".join(f"<url><loc>{_base()}{u}</loc></url>" for u in urls)
+    body += "".join(f"<url><loc>{_base()}/r/{r['id']}</loc><lastmod>{r['when'].strftime('%Y-%m-%d')}</lastmod></url>"
+                    for r in public_reports(5000))
     xml = f'<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">{body}</urlset>'
     return Response(xml, media_type="application/xml")
 
@@ -89,6 +130,7 @@ def llms():
 ## Pages
 - [Scan a site]({_base()}/): the scanner
 - [Pricing]({_base()}/pricing): free scans, Pro for scheduled monitoring
+- [Public reports]({_base()}/reports): latest docs-health grade for every publicly scanned site
 - [About the crawler]({_base()}/bot): user agent `InfoharnessBot`, how to block it
 
 ## Guides

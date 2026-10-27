@@ -98,7 +98,12 @@ def report(request: Request, scan_id: str):
         history = [{"id": h.id, "grade": h.grade, "score": round(h.score or 0), "when": h.finished_at or h.created_at,
                     "issues": (h.summary or {}).get("total_issues", 0), "pages": h.pages_crawled}
                    for h in history]
-        ctx = {"history": history, "scan": scan, "grouped": [(t, grouped[t]) for t in TYPE_LABELS if t in grouped],
+        indexable = seo.is_public_latest(scan)
+        latest_id = scan.id
+        if not indexable and scan.status == "done" and not (scan.client_hash or "").startswith("site:") and (scan.pages_crawled or 0) >= seo.MIN_PUBLIC_PAGES:
+            latest_id = s.scalar(select(Scan.id).where(Scan.url == scan.url, Scan.status == "done",
+                                                       ~Scan.client_hash.like("site:%")).order_by(Scan.created_at.desc()).limit(1)) or scan.id
+        ctx = {"indexable": indexable, "latest_id": latest_id, "history": history, "scan": scan, "grouped": [(t, grouped[t]) for t in TYPE_LABELS if t in grouped],
                "verdict": verdict(scan, issues), "total": len(issues), "report_md": report_md(scan, [(t, grouped[t]) for t in TYPE_LABELS if t in grouped]) if issues else "",
                "share_url": f"{config.settings.public_base_url}/r/{scan.id}",
                "badge_url": f"{config.settings.public_base_url}/badge/{scan.id}.svg"}

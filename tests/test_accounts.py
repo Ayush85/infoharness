@@ -144,7 +144,7 @@ def test_seo_surface(env):
     import json as _json
     c = TestClient(app)
     robots = c.get("/robots.txt").text
-    assert "Sitemap:" in robots and "Disallow: /r/" in robots and "Disallow: /account" in robots
+    assert "Sitemap:" in robots and "Disallow: /r/" not in robots and "Disallow: /account" in robots
     sm = c.get("/sitemap.xml").text
     assert "/guides/contradictory-docs-ai-assistants" in sm and "/pricing" in sm and "/r/" not in sm
     llms = c.get("/llms.txt").text
