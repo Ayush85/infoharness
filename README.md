@@ -31,11 +31,50 @@ browser ──► Caddy (HTTPS) ──► app (FastAPI, :8000) ──► Postgre
    builds, starts Postgres + app + worker + Caddy, and waits for the health check.
    HTTPS certificates are issued automatically on first visit.
 
+**Database:** if PostgreSQL is already running on the server, `deploy.sh` detects it and creates a
+separate `infoharness` database and login inside it (nothing else on the server is touched). Force a mode
+with `--db host` or `--db bundled`.
+
 **Already running nginx on 80/443?** Use `sudo ./deploy.sh infoharness.com "" --proxy none`, then follow
 `deploy/nginx.conf.example` (includes the certbot command).
 
 **Small server (2 GB RAM)?** The stack uses roughly 400–700 MB while scanning. If the server also
 runs other databases, add 2 GB swap — `deploy.sh` prints the exact command when swap is missing.
+
+## One server, many projects (shared PostgreSQL + ClickHouse)
+
+The `scripts/` folder turns your droplet into a small shared data platform. Every project gets its own
+database and login, so projects can't read each other's data, and credentials live in one place:
+`/etc/aydexis/projects/<project>.env` (root-only).
+
+| Task | Command |
+|---|---|
+| New project, PostgreSQL only | `sudo ./scripts/provision-project.sh myproject` |
+| New project with ClickHouse too | `sudo ./scripts/provision-project.sh myproject --clickhouse` |
+| Prepare ClickHouse once (installs if missing) | `sudo ./scripts/setup-clickhouse.sh` |
+| Same, and bind ClickHouse to localhost only | `sudo ./scripts/setup-clickhouse.sh --localhost-only` |
+| See a project's connection URLs | `sudo cat /etc/aydexis/projects/myproject.env` |
+
+What each project gets:
+
+| | PostgreSQL | ClickHouse |
+|---|---|---|
+| Database | `myproject` | `myproject` |
+| Login | `myproject` + random password | `myproject` + same password, localhost only |
+| Isolation | Only its own role can connect | Grants on its own database only |
+| Fair sharing | — | Per-project memory cap (600 MB) and 120 s query timeout |
+
+Scripts are safe to re-run: existing databases are kept and the stored password is re-applied.
+`setup-clickhouse.sh` only adds its own files under `/etc/clickhouse-server/{config,users}.d/` and never
+edits your existing configuration. It creates an `aydexis_admin` user with access management (needed to
+create per-project users) and caps ClickHouse at 35% of RAM so it coexists with PostgreSQL and your apps.
+
+**Connecting from Docker:** containers on the default bridge network can't reach `127.0.0.1` on the host.
+Use `network_mode: host` (as infoharness does in `docker-compose.host.yml`) or point the app at the
+Docker bridge gateway and allow it in `pg_hba.conf`.
+
+infoharness itself only needs PostgreSQL. ClickHouse is there for future analytics-heavy projects
+(event tracking, logs, aydex.cloud).
 
 ### Day-2 commands
 

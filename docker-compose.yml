@@ -1,18 +1,22 @@
 name: infoharness
 
+# Two database modes (deploy.sh picks one and records it in .env as COMPOSE_FILE / COMPOSE_PROFILES):
+#   bundled: this file alone + profile "bundled-db"   -> Postgres runs in its own container
+#   host:    plus docker-compose.host.yml              -> use the server's existing PostgreSQL
 x-app-env: &app-env
   env_file: .env
   environment:
-    DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-harness}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@db:5432/${POSTGRES_DB:-infoharness}
+    DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-harness}:${POSTGRES_PASSWORD:-}@db:5432/${POSTGRES_DB:-infoharness}
 
 services:
   db:
     image: postgres:16-alpine
     restart: unless-stopped
+    profiles: ["bundled-db"]
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-infoharness}
       POSTGRES_USER: ${POSTGRES_USER:-harness}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-}
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -30,6 +34,7 @@ services:
     depends_on:
       db:
         condition: service_healthy
+        required: false
     ports:
       - "127.0.0.1:${APP_PORT:-8000}:8000"   # only reachable from this server (Caddy/nginx proxy in front)
     mem_limit: 512m
@@ -42,6 +47,7 @@ services:
     depends_on:
       db:
         condition: service_healthy
+        required: false
       app:
         condition: service_started
     healthcheck:
@@ -53,8 +59,9 @@ services:
     restart: unless-stopped
     profiles: ["caddy"]
     environment:
-      DOMAIN: ${DOMAIN:?set DOMAIN in .env}
+      DOMAIN: ${DOMAIN:-localhost}
       ACME_EMAIL: ${ACME_EMAIL:-}
+      UPSTREAM: app:8000
     ports:
       - "80:80"
       - "443:443"
