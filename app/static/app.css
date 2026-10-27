@@ -367,3 +367,6 @@ cite a { color: var(--muted); }
 .pages .ctx{color:var(--muted,#5b6675);font-size:.85rem;margin-left:.4rem}
 .pages .more{color:var(--muted,#5b6675)}
 .pages li.target{display:flex;flex-wrap:wrap;gap:.5rem;align-items:center}
+
+.history{margin:.8rem 0}.history table{width:100%;border-collapse:collapse;font-size:.9rem;margin-top:.5rem}
+.history th,.history td{text-align:left;padding:.35rem .5rem;border-bottom:1px solid var(--line,#dde1e7)}.history tr.current{background:var(--marker-soft,#fff7c2)}

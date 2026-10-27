@@ -18,6 +18,13 @@
       {% if me and me.plan != 'pro' %}<a href="/pricing">Pro scans up to 2,000 pages.</a>{% endif %}</p>
     {% endif %}
     {% if scan.summary.links_skipped %}<p class="notice coverage">{{ scan.summary.links_skipped }} links were not checked (large platforms such as Google, Facebook or LinkedIn block automated checks, or the link limit was reached).</p>{% endif %}
+    {% if history|length > 1 %}
+    <details class="history"><summary>Past scans of this site ({{ history|length }}), kept permanently</summary>
+      <table><thead><tr><th>Date</th><th>Grade</th><th>Score</th><th>Issues</th><th>Pages</th><th></th></tr></thead><tbody>
+      {% for h in history %}<tr{% if h.id == scan.id %} class="current"{% endif %}><td>{{ h.when.strftime('%d %b %Y %H:%M') }}</td><td>{{ h.grade }}</td><td>{{ h.score }}</td><td>{{ h.issues }}</td><td>{{ h.pages }}</td>
+        <td>{% if h.id == scan.id %}this report{% else %}<a href="/r/{{ h.id }}">Open</a>{% endif %}</td></tr>{% endfor %}
+      </tbody></table></details>
+    {% endif %}
     <div class="report-actions">
       <button type="button" class="secondary" data-copy-text="{{ share_url }}">Copy report link</button>
       {% if report_md %}<button type="button" class="secondary" data-copy-from="report-md">Copy as Markdown</button>{% endif %}
