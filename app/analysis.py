@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import hashlib
 import re
+from urllib.parse import urlsplit
 from collections import Counter, defaultdict
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -443,11 +444,19 @@ def check_staleness(pages: list[PageDoc], *, now: datetime | None = None, stale_
 # ---------------------------------------------------------------- structure
 
 
+# Generated pages (Sphinx source listings, indexes, search) are not written content, so "thin" doesn't apply.
+GENERATED_PATH = re.compile(r"/(_modules|_sources|_static|genindex|py-modindex|modindex|search)(/|\.html|$)", re.I)
+
+
 def check_thin_pages(pages: list[PageDoc], *, min_words: int = 30) -> list[Finding]:
     """Placeholder pages. Words in site-wide template blocks (footers, feedback widgets) don't count."""
     boiler = boilerplate_keys(pages)
     out = []
     for p in pages:
+        if GENERATED_PATH.search(urlsplit(p.url).path):
+            continue
+        if sum(len(b.text.split()) for b in p.blocks if b.kind == "code") >= 60:
+            continue  # a code reference or example page is real content even with little prose
         words = sum(len(b.text.split()) for b in p.blocks if b.kind == "text" and _norm_key(b.text) not in boiler)
         if words < min_words and p.link_count < 15:
             out.append(Finding(

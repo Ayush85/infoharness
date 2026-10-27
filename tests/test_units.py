@@ -5,7 +5,7 @@ import httpx
 import pytest
 
 from app import config, llm
-from app.analysis import (Chunk, PageDoc, build_chunks, check_staleness, extract_facts, numeric_conflicts)
+from app.analysis import (Chunk, PageDoc, build_chunks, check_staleness, check_thin_pages, extract_facts, numeric_conflicts)
 from app.extract import Block, extract
 from app.security import UnsafeURL, check_url_safe, normalize_input_url
 
@@ -98,3 +98,17 @@ def test_llm_quote_verification(monkeypatch):
     assert ok and ok.contradiction
     hallucinated = asyncio.run(run("Refunds are possible within 90 days of purchase."))
     assert hallucinated is None
+
+
+def test_thin_page_ignores_generated_and_code_pages():
+    code = Block(" ".join(["x = foo(bar)"] * 40), "t", "code")
+    def pg(url, blocks):
+        return PageDoc(url=url, title="t", blocks=blocks, word_count=0, link_count=0)
+    pages = [
+        pg("https://d.io/en/latest/_modules/pkg/api", []),              # generated source listing
+        pg("https://d.io/en/latest/genindex", []),                       # generated index
+        pg("https://d.io/en/latest/examples", [code]),                   # code-only reference page
+        pg("https://d.io/en/latest/roadmap", [Block("Coming soon.", "t", "text")]),  # real placeholder
+    ]
+    flagged = [f.page_a for f in check_thin_pages(pages)]
+    assert flagged == ["https://d.io/en/latest/roadmap"]
