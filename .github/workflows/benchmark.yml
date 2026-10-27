@@ -1,0 +1,37 @@
+name: Benchmark (scan real docs sites)
+
+on:
+  workflow_dispatch:
+    inputs:
+      sites_file:
+        description: "File with one URL per line"
+        default: "bench/sites.txt"
+
+permissions:
+  contents: write
+
+jobs:
+  bench:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Scan the sites
+        run: python3 bench/run.py "${{ inputs.sites_file }}" bench/results
+      - name: Publish results to branch bench-results
+        if: always()
+        run: |
+          [ -d bench/results ] || exit 0
+          cp -r bench/results /tmp/results
+          git config user.name "bench-bot"; git config user.email "bench-bot@users.noreply.github.com"
+          git checkout --orphan bench-results
+          git rm -rf . -q
+          cp -r /tmp/results/* .
+          git add -A
+          git commit -qm "benchmark results $(date -u +%F-%H%M)"
+          git push -f origin bench-results
