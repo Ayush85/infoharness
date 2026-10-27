@@ -1,0 +1,52 @@
+{% extends "guides/_layout.html" %}
+{% block body %}
+<p class="lede">AI support assistants answer from your help center. If two pages give different answers to the same question, the assistant has no way to know which one is right, so it repeats whichever page it finds first.</p>
+
+<div class="takeaways">
+  <h2>In short</h2>
+  <ul>
+    <li>A contradiction is two pages stating different values for the same fact, such as a 14-day and a 30-day refund window.</li>
+    <li>Retrieval-based assistants pick passages by similarity to the question, not by which page is newer or more authoritative.</li>
+    <li>Most contradictions come from a policy change that reached one page but not the others.</li>
+    <li>The fix is one source of truth per fact, with other pages linking to it instead of copying it.</li>
+  </ul>
+</div>
+
+<h2>How a support assistant uses your docs</h2>
+<p>Most assistants split your pages into short passages, find the passages closest to the customer's question, and write an answer from them. Nothing in that process compares the passages with each other. If the two closest passages disagree, the answer follows whichever ranked higher, and the customer gets a confident reply that may contradict your actual policy.</p>
+<p>People hit the same problem with site search and with a human agent who searches the help center. An AI assistant just makes it faster and more visible.</p>
+
+<h2>How contradictions get in</h2>
+<table class="plans">
+  <thead><tr><th>What happened</th><th>Example</th><th>Fix</th></tr></thead>
+  <tbody>
+    <tr><td>A policy changed and one page was updated</td><td>Refund window is 30 days on the billing page, still 14 in the FAQ</td><td>State the fact once; link to it from other pages</td></tr>
+    <tr><td>A page was copied and edited</td><td>"Setup guide" and "Setup guide (copy)" drift apart</td><td>Merge them and redirect the old address</td></tr>
+    <tr><td>Version drift</td><td>One article describes v2 settings, the rest describe v5</td><td>Label old versions clearly or remove them</td></tr>
+    <tr><td>Different teams own different pages</td><td>Sales page says unlimited seats, help center says 50</td><td>Name one owner per fact and review together</td></tr>
+  </tbody>
+</table>
+
+<h2>How to find them</h2>
+<ol>
+  <li>List the facts customers ask about most: prices, limits, deadlines, supported versions, required steps.</li>
+  <li>Search your help center for each one and read every page that states it.</li>
+  <li>Compare numbers, units and conditions. "Within 30 days" and "within 30 days of delivery" are different promises.</li>
+  <li>Write down each mismatch with both page addresses and the exact sentences.</li>
+</ol>
+<p>That works for a few dozen pages. For hundreds of pages, a scanner like <a href="/">infoharness</a> does the comparison for you and shows both quotes side by side.</p>
+
+<h2>How to keep them out</h2>
+<ul>
+  <li><strong>One source of truth per fact.</strong> Put the number in one place and link to it elsewhere.</li>
+  <li><strong>An owner and a review date</strong> on every page that states a policy or a limit.</li>
+  <li><strong>A checklist item for every policy change:</strong> search the help center for the old value before you publish.</li>
+  <li><strong>A scheduled rescan</strong> so a new contradiction is caught within days, not when a customer complains.</li>
+</ul>
+
+<h2>Questions</h2>
+<h3>Can I fix this by changing the AI instead of the docs?</h3>
+<p>Prompt tweaks can make an assistant more cautious, but they can't tell it which of two conflicting pages is true. The reliable fix is making the pages agree.</p>
+<h3>How many contradictions are normal?</h3>
+<p>Almost every documentation site that has been edited by more than one person for more than a year has some. The goal is to find the ones customers are likely to ask about and fix those first.</p>
+{% endblock %}

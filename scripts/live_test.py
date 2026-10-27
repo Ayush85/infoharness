@@ -37,6 +37,10 @@ check("home page", s == 200 and "Scan my docs" in b, str(s))
 for path, needle in (("/pricing", "Pricing"), ("/login", "Email me a link")):
     s, b = call(path)
     check(f"{path} page", s == 200 and needle in b, str(s))
+for path, needle in (("/robots.txt", "Sitemap:"), ("/sitemap.xml", "<urlset"), ("/llms.txt", "# infoharness"),
+                     ("/guides", "Guides"), ("/guides/contradictory-docs-ai-assistants", "contradict")):
+    s, b = call(path)
+    check(f"{path}", s == 200 and needle in b, str(s))
 s, b = call("/account")
 check("/account needs login", s == 200 and "Email me a link" in b, str(s))  # redirected to the login form
 s, b = call("/api/scans", {"url": "ftp://example.com"})

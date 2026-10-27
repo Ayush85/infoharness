@@ -1,0 +1,47 @@
+{% extends "guides/_layout.html" %}
+{% block body %}
+<p class="lede">Duplicate and outdated pages are the two quietest causes of wrong answers. Neither throws an error. Both just keep saying something that used to be true.</p>
+
+<div class="takeaways">
+  <h2>In short</h2>
+  <ul>
+    <li>Duplicates are pages whose text is almost the same. Outdated pages say or imply they are old.</li>
+    <li>You can find many of both by hand with search and the sitemap; a scanner finds the rest.</li>
+    <li>For each duplicate: merge, redirect. For each outdated page: update, label as legacy, or remove.</li>
+  </ul>
+</div>
+
+<h2>Finding outdated pages</h2>
+<ul>
+  <li><strong>Search for years.</strong> Look for 2018, 2019, 2020 and so on in your help center, and for phrases such as "last updated" and "as of".</li>
+  <li><strong>Search for version numbers.</strong> If most pages say v5 and a few say v2, those few are suspects.</li>
+  <li><strong>Search for "deprecated", "legacy" and "beta".</strong> Check that each match explains what to do instead.</li>
+  <li><strong>Check dates in the sitemap.</strong> A <code>lastmod</code> far in the past on a page about a fast-moving feature is a flag.</li>
+  <li><strong>Read the oldest pages for your most-asked questions first.</strong> That is where an old answer does the most damage.</li>
+</ul>
+
+<h2>Finding duplicate pages</h2>
+<ul>
+  <li><strong>Sort the sitemap by title.</strong> Titles ending in "(copy)", "(old)" or "v2" are the obvious ones.</li>
+  <li><strong>Search a distinctive sentence</strong> from an important page. If it appears on several pages, you have copies.</li>
+  <li><strong>Compare similar topics.</strong> Setup, installation and getting started pages often overlap.</li>
+</ul>
+<p>Automatic detection works by turning each page into a list of word weights and comparing every pair; pages that score very close to each other are flagged as near-identical. That catches copies even when a few words differ.</p>
+
+<h2>What to do with each one</h2>
+<table class="plans">
+  <thead><tr><th>You found</th><th>Do this</th></tr></thead>
+  <tbody>
+    <tr><td>Two near-identical pages</td><td>Keep the better one, redirect the other to it, update internal links</td></tr>
+    <tr><td>A paragraph pasted in many pages</td><td>Move it to one page and link to it</td></tr>
+    <tr><td>A page for an old version that people still use</td><td>Keep it, label the version clearly at the top, and link to the current page</td></tr>
+    <tr><td>A page that is simply wrong now</td><td>Update it, or remove it and redirect to the right page</td></tr>
+  </tbody>
+</table>
+
+<h2>Questions</h2>
+<h3>Should I delete old pages or keep them?</h3>
+<p>Keep a page only if someone still needs it, and then label it as old. Otherwise redirect it to the page that replaced it, so readers and assistants don't land on stale text.</p>
+<h3>Do duplicate pages hurt search rankings?</h3>
+<p>They split links and attention between two addresses and make it unclear which page is the main one. Merging them and redirecting the old address is the usual fix.</p>
+{% endblock %}

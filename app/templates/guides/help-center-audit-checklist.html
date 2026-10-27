@@ -1,0 +1,30 @@
+{% extends "guides/_layout.html" %}
+{% block body %}
+<p class="lede">A help center rarely breaks all at once. It drifts: a page is copied, a policy changes, a product is renamed. This checklist covers the ten checks that catch most of the drift.</p>
+
+<div class="takeaways">
+  <h2>In short</h2>
+  <ul>
+    <li>Start with contradictions and outdated pages. They cause wrong answers.</li>
+    <li>Then clean up duplicates, broken links, thin pages and orphans. They add noise.</li>
+    <li>Repeat on a schedule. A one-off audit goes stale within months.</li>
+  </ul>
+</div>
+
+<h2>The checklist</h2>
+<ol class="checklist">
+  <li><h3>Contradictions</h3><p>Compare the prices, limits, deadlines and steps that different pages state about the same thing. Fix the wrong page, or better, replace the repeated number with a link to one authoritative page.</p></li>
+  <li><h3>Duplicate pages</h3><p>Look for two pages with nearly the same text. Keep the better one, redirect the other to it, and update links.</p></li>
+  <li><h3>Repeated sections</h3><p>The same paragraph pasted into many articles will be edited in some places and not others. Move it into one page and link to it, or use a shared snippet in your docs tool.</p></li>
+  <li><h3>Outdated pages</h3><p>Search for old years, "deprecated", "legacy" and old version numbers. Update the page, label it as legacy, or remove it.</p></li>
+  <li><h3>Broken links</h3><p>Check internal and external links. Replace or remove links that return 404 or 410. External links break more often than you expect.</p></li>
+  <li><h3>Thin pages</h3><p>"Coming soon" and near-empty pages still show up in search. Fill them in or remove them.</p></li>
+  <li><h3>Orphan pages</h3><p>Pages in the sitemap that nothing links to are rarely maintained. Link them from a relevant page, or retire them.</p></li>
+  <li><h3>Unique titles and headings</h3><p>Two pages titled "Getting started" confuse readers and search. Make each title say what is on the page.</p></li>
+  <li><h3>Ownership</h3><p>Every page that states a policy or limit needs a named owner and a review date.</p></li>
+  <li><h3>Redirects after restructuring</h3><p>When you move or rename pages, redirect the old addresses so links and bookmarks keep working.</p></li>
+</ol>
+
+<h2>How often to run it</h2>
+<p>Run the first five checks every time a policy, price or product name changes, and the whole list at least quarterly. Checks 1 to 7 can be automated: <a href="/">infoharness</a> runs them in about two minutes, and the Pro plan repeats them on a schedule and emails you when something new appears.</p>
+{% endblock %}

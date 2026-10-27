@@ -22,7 +22,7 @@ from app.db import Issue, Scan, init_engine, session_scope, utcnow
 from app.auth import client_hash
 from app.scoring import TYPE_LABELS
 from app.templating import report_md, templates, verdict
-from app import accounts
+from app import accounts, seo
 from app.security import UnsafeURL, check_url_safe, normalize_input_url
 
 logging.basicConfig(level=os.getenv("LOG_LEVEL", "INFO"), format="%(asctime)s %(levelname)s %(name)s: %(message)s")
@@ -36,7 +36,22 @@ async def lifespan(_app: FastAPI):
 
 app = FastAPI(title="infoharness", version=__version__, docs_url=None, redoc_url=None, lifespan=lifespan)
 app.include_router(accounts.router)
-app.mount("/static", StaticFiles(directory=BASE / "static"), name="static")
+app.include_router(seo.router)
+from fastapi.middleware.gzip import GZipMiddleware  # noqa: E402
+
+app.add_middleware(GZipMiddleware, minimum_size=1000)
+
+
+class CachedStatic(StaticFiles):
+    """Fonts and images never change under the same name; CSS/JS carry ?v=<version> in their URL."""
+    async def get_response(self, path, scope):
+        resp = await super().get_response(path, scope)
+        resp.headers["Cache-Control"] = "public, max-age=31536000, immutable" if path.startswith("fonts/") \
+            else "public, max-age=86400"
+        return resp
+
+
+app.mount("/static", CachedStatic(directory=BASE / "static"), name="static")
 
 
 # ---------------------------------------------------------------- helpers
@@ -63,7 +78,8 @@ def scan_json(scan: Scan, issues: list[Issue] | None = None) -> dict:
 
 @app.get("/", response_class=HTMLResponse)
 def index(request: Request):
-    return templates.TemplateResponse(request, "index.html", {"max_pages": config.settings.max_pages})
+    return templates.TemplateResponse(request, "index.html", {
+        "max_pages": config.settings.max_pages, "faqs": seo.FAQS, "guides": seo.GUIDES, "ld": seo.home_jsonld()})
 
 
 @app.get("/r/{scan_id}", response_class=HTMLResponse)

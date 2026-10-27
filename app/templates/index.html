@@ -1,4 +1,7 @@
 {% extends "base.html" %}
+{% block title %}Docs contradiction checker for help centers · infoharness{% endblock %}
+{% block description %}Free scan of your help center or docs site. Finds contradicting pages, duplicates, outdated content and broken links, the problems that make AI assistants answer wrong.{% endblock %}
+{% block jsonld %}<script type="application/ld+json">{{ ld|tojson }}</script>{% endblock %}
 {% macro scan_form(id, button="Scan my docs") %}
 <form class="scan-form" data-scan-form novalidate>
   <label for="url-{{ id }}" class="sr-only">Docs or help center URL</label>
@@ -73,16 +76,22 @@
   </div>
 </section>
 
+<section class="section" id="guides">
+  <div class="wrap">
+    <div class="section-head"><h2>Guides</h2><p>Short reads on keeping documentation accurate.</p></div>
+    <ul class="sites guide-list" style="margin-top:0">
+      {% for g in guides %}<li class="panel"><h3><a href="/guides/{{ g.slug }}">{{ g.title }}</a></h3><p style="margin:6px 0 0;color:var(--ink-soft);font-size:.96rem">{{ g.summary }}</p></li>{% endfor %}
+    </ul>
+  </div>
+</section>
+
 <section class="section" id="faq">
   <div class="wrap">
     <div class="section-head"><h2>Questions</h2></div>
     <div class="faq">
-      <details><summary>Does it read private or logged-in pages?</summary><p>No. It only reads pages anyone can open without signing in. Docs behind a login can't be scanned yet.</p></details>
-      <details><summary>Will it work on my site?</summary><p>It works on any docs or help center that serves its text as HTML, which covers most platforms. Sites that only draw their content with JavaScript show up as unreadable.</p></details>
-      <details><summary>How are contradictions found?</summary><p>By comparing the numbers, limits and dates that pages state about the same thing. Each finding shows both quotes side by side so you can judge it in seconds. Switching on AI verification also catches contradictions in wording.</p></details>
-      <details><summary>Who can see my report?</summary><p>Anyone who has the link. Reports are not listed anywhere and are hidden from search engines.</p></details>
-      <details><summary>What does it cost?</summary><p>Scanning is free. <a href="/pricing">Pro</a> watches your docs on a schedule and emails you when something new breaks.</p></details>
-      <details><summary>Can I stop the crawler?</summary><p>Yes. Add <code>InfoharnessBot</code> to your robots.txt. <a href="/bot#block">Here's how.</a></p></details>
+      {% for q, a, link in faqs %}
+      <details><summary>{{ q }}</summary><p>{{ a }}{% if link %} <a href="{{ link[1] }}">{{ link[0] }}.</a>{% endif %}</p></details>
+      {% endfor %}
     </div>
 
     <div class="cta-band">

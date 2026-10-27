@@ -138,3 +138,27 @@ def test_pricing_and_waitlist(env):
     assert "Pro opens soon" in c.get("/pricing").text
     r = c.post("/pricing/waitlist", data={"email": "me@example.com"})
     assert "on the list" in r.text
+
+
+def test_seo_surface(env):
+    import json as _json
+    c = TestClient(app)
+    robots = c.get("/robots.txt").text
+    assert "Sitemap:" in robots and "Disallow: /r/" in robots and "Disallow: /account" in robots
+    sm = c.get("/sitemap.xml").text
+    assert "/guides/contradictory-docs-ai-assistants" in sm and "/pricing" in sm and "/r/" not in sm
+    llms = c.get("/llms.txt").text
+    assert llms.startswith("# infoharness") and "/guides/" in llms
+    home = c.get("/")
+    assert '<link rel="canonical"' in home.text and 'og:image' in home.text
+    ld = re.findall(r'<script type="application/ld\+json">(.*?)</script>', home.text, re.S)
+    graph = _json.loads(ld[0].replace("&#34;", '"'))["@graph"]
+    assert {n["@type"] for n in graph} >= {"Organization", "SoftwareApplication", "FAQPage"}
+    for slug in ("contradictory-docs-ai-assistants", "help-center-audit-checklist", "find-duplicate-and-outdated-pages"):
+        r = c.get(f"/guides/{slug}")
+        assert r.status_code == 200 and "<h1>" in r.text and "application/ld+json" in r.text
+    assert c.get("/guides/nope").status_code == 404
+    assert c.get("/guides").status_code == 200
+    # private pages stay out of the index
+    assert 'content="noindex"' in c.get("/login").text
+    assert "immutable" in c.get("/static/fonts/schibsted-grotesk-latin-wght-normal.woff2").headers["cache-control"]

@@ -339,3 +339,25 @@ cite a { color: var(--muted); }
   .site-head, .site-foot, .filters, .report-actions, .share, .issue-foot, .skip { display: none !important; }
   body { background: #fff; font-size: 12pt; } .group { break-inside: avoid-page; } .issue { break-inside: avoid; }
 }
+
+/* ---------- guides */
+.article { max-width: 44rem; }
+.article h1 { margin-bottom: 18px; }
+.article .lede { margin-bottom: 28px; }
+.article p, .article li { max-width: 40rem; }
+.article ol, .article ul { padding-left: 1.3em; } .article li { margin-bottom: .55em; }
+.article h3 { margin: 22px 0 6px; }
+.article table.plans { font-size: .95rem; }
+.article table.plans td { vertical-align: top; }
+.takeaways { background: var(--sheet); border: 1px solid var(--line); border-left: 4px solid var(--marker); border-radius: var(--r-m); padding: 18px 22px; margin: 0 0 12px; }
+.takeaways h2 { font-size: 1.05rem; margin: 0 0 8px; }
+.takeaways ul { margin: 0; }
+.checklist { list-style: none; padding: 0 !important; counter-reset: c; }
+.checklist > li { counter-increment: c; border-top: 1px solid var(--line); padding: 16px 0 4px 44px; position: relative; max-width: none; }
+.checklist > li::before { content: counter(c); position: absolute; left: 0; top: 14px; width: 30px; height: 30px; border-radius: 50%; background: var(--ink); color: var(--on-ink); display: grid; place-content: center; font-weight: 700; font-size: .9rem; }
+.checklist h3 { margin-top: 2px; }
+.cta-inline { margin: 40px 0 8px; background: var(--ink); color: var(--on-ink); border-radius: var(--r-l); padding: 26px 28px; }
+.cta-inline h2 { color: var(--on-ink); margin: 0 0 8px; font-size: 1.35rem; }
+.cta-inline p { color: #c3cddd; }
+.cta-inline .button { background: var(--paper); color: var(--ink); border-color: var(--paper); }
+.guide-list { margin-top: 28px; }
