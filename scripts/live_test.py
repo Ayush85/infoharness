@@ -34,7 +34,7 @@ s, b = call("/healthz")
 check("healthz", s == 200 and '"ok":true' in b.replace(" ", ""), f"{s} {b[:60]}")
 s, b = call("/")
 check("home page", s == 200 and "Scan my docs" in b, str(s))
-for path, needle in (("/pricing", "Pricing"), ("/login", "Email me a link")):
+for path, needle in (("/pricing", "Free. All of it."), ("/login", "Email me a link")):
     s, b = call(path)
     check(f"{path} page", s == 200 and needle in b, str(s))
 for path, needle in (("/robots.txt", "Sitemap:"), ("/sitemap.xml", "<urlset"), ("/llms.txt", "# infoharness"),
