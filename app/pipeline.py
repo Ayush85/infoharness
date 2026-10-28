@@ -24,10 +24,22 @@ class Progress:
     def __init__(self, scan_id: str):
         self.scan_id = scan_id
         self._last = 0.0
+        self.live: dict = {"recent": []}
+
+    def note(self, **info) -> None:
+        """Remember live details (current page, counters). They are written with the next progress update."""
+        url = info.pop("current", None)
+        if url:
+            self.live["current"] = url
+            recent = self.live["recent"]
+            if not recent or recent[-1] != url:
+                recent.append(url)
+                del recent[:-6]
+        self.live.update(info)
 
     def set(self, stage: str, pct: int, pages: int | None = None, force: bool = False) -> None:
         now = time.monotonic()
-        if not force and now - self._last < 1.0:
+        if not force and now - self._last < 0.8:
             return
         self._last = now
         with session_scope() as s:
@@ -37,6 +49,7 @@ class Progress:
                 scan.progress = max(scan.progress or 0, min(99, pct))
                 if pages is not None:
                     scan.pages_crawled = pages
+                scan.summary = {"live": dict(self.live, recent=list(self.live["recent"]))}
 
 
 def run_scan(scan_id: str) -> None:
@@ -83,6 +96,13 @@ def _fail(scan_id: str, message: str) -> None:
             scan.status, scan.stage, scan.error, scan.finished_at = "failed", "failed", message, utcnow()
 
 
+def _crawl_progress(prog: Progress, n: int, mx: int, url: str | None, found: int | None) -> None:
+    found = max(found or n, n, 1)
+    prog.note(current=url, pages_found=found)
+    # the bar follows pages read out of pages found so far, so small sites fill quickly instead of crawling to a limit
+    prog.set("crawling", int(5 + 55 * n / min(found, mx)), pages=n)
+
+
 def _is_partial(crawl: CrawlResult) -> bool:
     r = crawl.stopped_reason or ""
     return bool(crawl.overflow) or r.startswith("page limit") or r.startswith("time limit")
@@ -94,7 +114,7 @@ async def _run(url: str, prog: Progress, max_pages: int | None = None) -> tuple[
     budget = s.pro_scan_seconds if pro else s.max_scan_seconds
     deadline = time.monotonic() + budget * 0.6
     crawler = Crawler(url, max_pages=max_pages, deadline=deadline,
-                      on_progress=lambda n, mx: prog.set("crawling", int(5 + 55 * n / max(1, mx)), pages=n))
+                      on_progress=lambda n, mx, url=None, found=None: _crawl_progress(prog, n, mx, url, found))
     crawl = await crawler.run()
     prog.set("analysing content", 62, pages=len(crawl.pages), force=True)
 
@@ -142,7 +162,7 @@ async def _run(url: str, prog: Progress, max_pages: int | None = None) -> tuple[
     prog.set("checking links", 72, force=True)
 
     # ---- links (runs while nothing else is pending; cheap)
-    findings += await _link_findings(crawl, crawler, pro=pro)
+    findings += await _link_findings(crawl, crawler, prog, pro=pro)
     prog.set("verifying contradictions" if s.llm_enabled else "scoring", 85, force=True)
 
     if s.llm_enabled:
@@ -191,7 +211,7 @@ def _finding_for(crawl: CrawlResult, url: str, status: int, internal: bool) -> F
         points=(2.0 if internal else 0.5) if status else 0.3)
 
 
-async def _link_findings(crawl: CrawlResult, crawler: Crawler, pro: bool = False) -> list[Finding]:
+async def _link_findings(crawl: CrawlResult, crawler: Crawler, prog: Progress, pro: bool = False) -> list[Finding]:
     s = config.settings
     out: list[Finding] = []
     site_host = crawler.host
@@ -233,7 +253,14 @@ async def _link_findings(crawl: CrawlResult, crawler: Crawler, pro: bool = False
     targets = sorted(same_site) + (sorted(external) if s.check_external_links else [])
     crawl.links_skipped = getattr(crawl, "links_skipped", 0) + max(0, len(targets) - limit)
     if targets:
-        statuses = await check_links(targets, limit=limit, timeout_s=s.link_check_seconds)
+        total = min(len(targets), limit)
+        prog.note(links_total=total, links_done=0)
+
+        def link_progress(done: int, tot: int, u: str) -> None:
+            prog.note(current=u, links_done=done)
+            prog.set("checking links", 72 + int(12 * done / max(1, tot)))
+
+        statuses = await check_links(targets, limit=limit, timeout_s=s.link_check_seconds, on_progress=link_progress)
         crawl.links_checked = len(statuses)
         same = set(same_site)
         for u, st in statuses.items():

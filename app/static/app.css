@@ -389,3 +389,11 @@ form.inline{display:inline}.issue-foot{display:flex;gap:.5rem;flex-wrap:wrap}
 .grade-chip.small{width:1.7rem;height:1.7rem;font-size:.9rem}
 
 .recent ul{list-style:none;padding:0;margin:0;display:grid;gap:.2rem;font-size:.92rem}
+
+.live-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:.6rem;margin:1rem 0}
+.live-stats dt{font-size:.8rem;color:var(--muted,#5b6675)}.live-stats dd{margin:0;font-size:1.3rem;font-weight:700}
+.live-stats .of{font-size:.8rem;font-weight:500;color:var(--muted,#5b6675)}
+.live-now{font-family:ui-monospace,monospace;font-size:.85rem;margin:.4rem 0;word-break:break-all;min-height:1.3em}
+.live-feed{list-style:none;padding:0;margin:0 0 1rem;font-family:ui-monospace,monospace;font-size:.78rem;color:var(--muted,#5b6675)}
+.live-feed li{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.live-feed li:first-child{color:var(--ink,#0e1a2b)}
+@media (prefers-reduced-motion:no-preference){.live-feed li{animation:feedin .25s ease-out}@keyframes feedin{from{opacity:0;transform:translateY(-3px)}}}

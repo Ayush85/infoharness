@@ -61,6 +61,8 @@ def scan_json(scan: Scan, issues: list[Issue] | None = None) -> dict:
         "id": scan.id, "url": scan.url, "root": scan.root, "status": scan.status, "stage": scan.stage,
         "progress": scan.progress, "pages_crawled": scan.pages_crawled, "score": scan.score,
         "grade": scan.grade, "summary": scan.summary or {}, "error": scan.error,
+        "live": (scan.summary or {}).get("live") if scan.status == "running" else None,
+        "started_at": scan.started_at.isoformat() if scan.started_at else None,
         "created_at": scan.created_at.isoformat() if scan.created_at else None,
         "finished_at": scan.finished_at.isoformat() if scan.finished_at else None,
         "report_url": f"{config.settings.public_base_url}/r/{scan.id}",

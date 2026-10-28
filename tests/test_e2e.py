@@ -106,3 +106,19 @@ def test_export_pages_and_diff(env, docs_site):
     assert f"/r/{first}" in html
     for path in ("/contact", "/privacy", "/terms"):
         assert client.get(path).status_code == 200
+
+
+def test_live_progress_is_exposed_while_running(env):
+    from fastapi.testclient import TestClient
+    from app.main import app
+    from app.db import Scan, session_scope
+    from app.pipeline import Progress
+    with session_scope() as s:
+        scan = Scan(url="http://x.example/docs", status="running", started_at=None)
+        s.add(scan); s.flush(); sid = scan.id
+    prog = Progress(sid)
+    prog.note(current="http://x.example/docs/a", pages_found=12)
+    prog.note(current="http://x.example/docs/b")
+    prog.set("crawling", 30, pages=3, force=True)
+    data = TestClient(app).get(f"/api/scans/{sid}").json()
+    assert data["live"]["pages_found"] == 12 and data["live"]["recent"][-1].endswith("/b") and data["pages_crawled"] == 3

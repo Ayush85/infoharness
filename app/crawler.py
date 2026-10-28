@@ -301,7 +301,7 @@ class Crawler:
                         else:
                             self.result.out_of_scope_links.add(ln)
                 if self.on_progress:
-                    self.on_progress(len(self.result.pages), self.max_pages)
+                    self.on_progress(len(self.result.pages), self.max_pages, url, len(self._queued))
             finally:
                 queue.task_done()
 
@@ -320,7 +320,7 @@ def is_bot_hostile(host: str) -> bool:
 
 
 async def check_links(urls: list[str], *, limit: int, client: httpx.AsyncClient | None = None,
-                      timeout_s: float | None = None) -> dict[str, int]:
+                      timeout_s: float | None = None, on_progress=None) -> dict[str, int]:
     """HEAD (then GET) each URL; returns url -> status (0 = network error). 403/429 are reported as-is.
     Two requests per host at a time, one retry for errors that are often momentary, and an overall time budget."""
     s = config.settings
@@ -350,6 +350,8 @@ async def check_links(urls: list[str], *, limit: int, client: httpx.AsyncClient 
             if r.error and r.status == 0 and ("private" in r.error.lower() or "blocked" in r.error.lower()):
                 return  # never report internal-network URLs
             results[u] = r.status
+            if on_progress:
+                on_progress(len(results), min(len(urls), limit), u)
 
     tasks = [asyncio.create_task(one(u)) for u in urls[:limit]]
     try:

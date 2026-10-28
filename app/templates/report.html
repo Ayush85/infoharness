@@ -53,7 +53,15 @@
       {% for label, start in steps %}<li data-start="{{ start }}" class="{{ 'done' if scan.progress >= (steps[loop.index][1] if not loop.last else 100) else ('active' if scan.progress >= start and scan.status == 'running' else '') }}">{{ label }}</li>{% endfor %}
     </ol>
     <div class="bar" role="progressbar" aria-label="Scan progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ scan.progress }}"><span id="bar-fill" style="width: {{ scan.progress }}%"></span></div>
-    <p class="progress-pages"><span id="pages">{{ scan.pages_crawled }}</span> pages read so far. This page updates by itself, so you can leave it open.</p>
+    <dl class="live-stats">
+      <div><dt>Pages read</dt><dd><span id="pages">{{ scan.pages_crawled }}</span><span id="pages-found" class="of"></span></dd></div>
+      <div><dt>Links checked</dt><dd id="links">–</dd></div>
+      <div><dt>Elapsed</dt><dd id="elapsed">0s</dd></div>
+      <div><dt>Time left</dt><dd id="eta">estimating…</dd></div>
+    </dl>
+    <p class="live-now" id="now" aria-hidden="true"></p>
+    <ul class="live-feed" id="feed" aria-hidden="true"></ul>
+    <p class="progress-pages">This page updates by itself, so you can leave it open. We'll keep the report at this address.</p>
   </section>
 
   {% elif scan.status == 'failed' %}
