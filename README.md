@@ -21,10 +21,11 @@ browser ──► Caddy (HTTPS) ──► app (FastAPI, :8000) ──► Postgre
 ## Automatic deploys from GitHub (recommended)
 
 1. On the droplet, once: `sudo bash scripts/setup-deploy-access.sh` (from a checkout of this repo, or download it).
-   It creates a `deploy` user with its own SSH key and prints the values to add in GitHub.
+   It creates a dedicated `ih-deploy` user (change with `DEPLOY_USER=name`) with its own SSH key, so other
+   projects on the same server can have their own user and key without overwriting this one. It prints the values to add in GitHub.
 2. GitHub → repo → Settings → Secrets and variables → Actions: add the printed secrets
    (`DEPLOY_HOST`, `DEPLOY_PORT`, `DEPLOY_KNOWN_HOSTS`, `DEPLOY_SSH_KEY`) and variables
-   (`DEPLOY_DOMAIN`, `DEPLOY_EMAIL`, optional `DEPLOY_PATH`, `DEPLOY_ARGS`).
+   (`DEPLOY_DOMAIN`, `DEPLOY_EMAIL`, `DEPLOY_USER`, optional `DEPLOY_PATH`, `DEPLOY_ARGS`).
 3. Actions → **Deploy** → Run workflow. After that, every push to `main` runs the tests, uploads the
    code over SSH (host key pinned), runs `deploy.sh` and checks `https://DOMAIN/healthz`.
 

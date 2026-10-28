@@ -32,6 +32,7 @@ jobs:
     env:
       HOST: ${{ secrets.DEPLOY_HOST }}
       PORT: ${{ secrets.DEPLOY_PORT || '22' }}
+      DEPLOY_USER: ${{ vars.DEPLOY_USER || 'ih-deploy' }}
       DEPLOY_PATH: ${{ vars.DEPLOY_PATH || '/opt/infoharness' }}
       DOMAIN: ${{ vars.DEPLOY_DOMAIN }}
       EMAIL: ${{ vars.DEPLOY_EMAIL }}
@@ -61,7 +62,7 @@ jobs:
           Host server
             HostName $HOST
             Port $PORT
-            User deploy
+            User $DEPLOY_USER
             IdentityFile ~/.ssh/deploy_key
             IdentitiesOnly yes
             StrictHostKeyChecking yes
@@ -83,7 +84,7 @@ jobs:
       - name: Upload code
         run: |
           ssh server "mkdir -p '$DEPLOY_PATH' 2>/dev/null; test -w '$DEPLOY_PATH'" || {
-            echo "::error::User 'deploy' can't write to $DEPLOY_PATH on the server. Fix: sudo mkdir -p $DEPLOY_PATH && sudo chown -R deploy:deploy $DEPLOY_PATH  (or set the DEPLOY_PATH variable to /opt/infoharness)"
+            echo "::error::User '$DEPLOY_USER' can't write to $DEPLOY_PATH on the server. Fix: sudo mkdir -p $DEPLOY_PATH && sudo chown -R $DEPLOY_USER:$DEPLOY_USER $DEPLOY_PATH  (or set the DEPLOY_PATH variable to /opt/infoharness)"
             exit 1
           }
           rsync -az --delete \

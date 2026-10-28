@@ -3,10 +3,12 @@
 #
 #   sudo bash scripts/setup-deploy-access.sh            # run on the droplet
 #
-# Creates a 'deploy' user with its own SSH key, Docker access and passwordless sudo, then prints the
+# Creates a dedicated 'ih-deploy' user (override: DEPLOY_USER=name) with its own SSH key, Docker access and
+# passwordless sudo, so other projects on this server keep their own user and key and never overwrite this
+# one. Then prints the
 # three values to paste into GitHub (Settings -> Secrets and variables -> Actions).
 # The private key is shown once and then deleted from the server. Treat it as root access:
-# revoke any time with  sudo rm /home/deploy/.ssh/authorized_keys
+# revoke any time with  sudo rm /home/ih-deploy/.ssh/authorized_keys
 set -euo pipefail
 trap 'echo "xx setup-deploy-access.sh failed at line $LINENO: $BASH_COMMAND" >&2' ERR
 [[ $EUID -eq 0 ]] || { echo "Run with sudo." >&2; exit 1; }
@@ -17,15 +19,15 @@ for d in /tmp/tmp.*; do
   [[ -f "$d/key" && -f "$d/key.pub" ]] && grep -q "github-actions-deploy@" "$d/key.pub" 2>/dev/null && rm -rf "$d"
 done
 
-USER_NAME=deploy
+USER_NAME="${DEPLOY_USER:-ih-deploy}"
 DEPLOY_PATH="${DEPLOY_PATH:-/opt/infoharness}"
 
 say "User '$USER_NAME' (docker access, passwordless sudo)"
 id "$USER_NAME" >/dev/null 2>&1 || useradd --create-home --shell /bin/bash "$USER_NAME"
 if getent group docker >/dev/null; then usermod -aG docker "$USER_NAME"; fi
-echo "$USER_NAME ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/90-deploy
-chmod 440 /etc/sudoers.d/90-deploy
-visudo -cf /etc/sudoers.d/90-deploy >/dev/null
+echo "$USER_NAME ALL=(ALL) NOPASSWD:ALL" > "/etc/sudoers.d/90-$USER_NAME"
+chmod 440 "/etc/sudoers.d/90-$USER_NAME"
+visudo -cf "/etc/sudoers.d/90-$USER_NAME" >/dev/null
 
 if ! command -v rsync >/dev/null; then say "Installing rsync"; apt-get update -qq && apt-get install -y -qq rsync; fi
 mkdir -p "$DEPLOY_PATH"
@@ -80,6 +82,7 @@ $(cat "$tmp/key")
  DEPLOY_DOMAIN       = infoharness.com
  DEPLOY_EMAIL        = your email (for HTTPS certificates)
  DEPLOY_PATH         = $DEPLOY_PATH
+ DEPLOY_USER         = $USER_NAME
  DEPLOY_ARGS         = (optional, e.g. --proxy none   if nginx already owns 80/443)
 
 Then: repo -> Actions -> "Deploy" -> Run workflow. Later deploys run on every push to main.
