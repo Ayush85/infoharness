@@ -234,3 +234,12 @@ class ApiKey(Base):
     key_hash: Mapped[str] = mapped_column(String(64), unique=True, index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     last_used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class UserSetting(Base):
+    """Per-user email preferences (separate table so `users` never changes shape in production)."""
+    __tablename__ = "user_settings"
+
+    user_id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    digest: Mapped[bool] = mapped_column(Boolean, default=True)
+    last_digest_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

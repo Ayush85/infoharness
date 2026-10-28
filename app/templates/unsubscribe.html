@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}Stop weekly emails · infoharness{% endblock %}
+{% block head %}<meta name="robots" content="noindex">{% endblock %}
+{% block content %}<div class="wrap page" style="max-width:36rem">
+  {% if not ok %}<h1>This link is not valid</h1><p>Open your <a href="/account">account</a> to change email settings.</p>
+  {% elif done %}<h1>Weekly emails stopped</h1><p>You will not get the weekly summary any more. Alerts about new problems on your watched sites are separate; you can turn the summary back on from your <a href="/account">account</a>.</p>
+  {% else %}<h1>Stop the weekly summary?</h1>
+  <form method="post" action="/unsubscribe/{{ uid }}/{{ sig }}"><button type="submit">Yes, stop weekly emails</button></form>{% endif %}
+</div>{% endblock %}

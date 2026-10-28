@@ -141,3 +141,15 @@ def test_benchmark_false_positive_guards():
     assert check_staleness([old]) == []
     txt = PageDoc(url="https://x.com/docs/page/llms.txt", title="t", blocks=[Block(kind="text", text="{count}", heading="")], word_count=1)
     assert check_thin_pages([txt]) == []
+
+
+def test_fix_steps_cover_every_finding_type():
+    from app.analysis import Finding
+    from app.suggest import fix_steps
+    for t, ex in [("contradiction", {"values": [14, 30]}), ("duplicate_page", {"pages": ["https://x.com/a", "https://x.com/a-copy"]}),
+                  ("duplicate_section", {}), ("stale", {"method": "version_drift", "latest": 5}), ("stale", {}),
+                  ("broken_link", {"internal": True, "site_wide": True, "sources_total": 40}), ("broken_link", {"internal": False}),
+                  ("admin_link", {}), ("thin_page", {}), ("orphan_page", {})]:
+        steps = fix_steps(Finding(type=t, severity="low", title="x", page_a="https://x.com/a", page_b="https://x.com/b", extra=ex))
+        assert 1 <= len(steps) <= 5 and all(isinstance(s, str) and s for s in steps), t
+    assert "once in the template" in fix_steps(Finding(type="broken_link", severity="low", title="x", extra={"internal": True, "site_wide": True, "sources_total": 40}))[0]

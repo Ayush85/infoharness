@@ -79,6 +79,7 @@ def main() -> None:
         log.warning("marked %d interrupted scans as failed", recovered)
     log.info("worker ready (llm=%s, embeddings=%s)", config.settings.llm_enabled, config.settings.embeddings_provider)
     last_sched = 0.0
+    last_digest = 0.0
     while not _stop:
         try:
             if time.monotonic() - last_sched > 60:
@@ -86,6 +87,10 @@ def main() -> None:
                 queued = monitor.queue_due_scans()
                 if queued:
                     log.info("queued %d scheduled rescans", queued)
+            if time.monotonic() - last_digest > 3600:
+                last_digest = time.monotonic()
+                if monitor.send_digests():
+                    log.info("sent weekly digests")
             if not run_once():
                 time.sleep(config.settings.worker_poll_seconds)
         except Exception:

@@ -134,6 +134,11 @@
             {% endif %}
           </ul>
         {% endif %}
+        {% set steps = i|fix_steps(scan.root) %}
+        {% if steps %}<details class="how-fix"><summary>How to fix</summary><ol>{% for st in steps %}<li>{{ st }}</li>{% endfor %}</ol>
+          {% if i.extra and i.extra.ai_fix %}<p class="ai-fix"><strong>Suggestion:</strong> {{ i.extra.ai_fix }}</p>
+          {% elif settings().llm_enabled %}<button type="button" class="secondary small" data-ai-fix="{{ i.id }}">Suggest wording (AI)</button><p class="ai-fix" hidden></p>{% endif %}
+        </details>{% endif %}
         <div class="issue-foot"><button type="button" class="secondary small" data-copy-text="{{ i|issue_md(scan.root) }}">Copy as task</button>
           <button type="button" class="secondary small" data-create-issue>Create issue</button>
           <button type="button" class="secondary small" data-feedback="{{ i.id }}" title="Tell us this finding is wrong, so we can fix the check">Not a problem</button>

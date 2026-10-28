@@ -284,3 +284,53 @@ def test_api_keys(env, monkeypatch, docs_site):
         assert s.get(ScanMeta, other.json()["id"]).user_id is not None and s.get(ScanMeta, r.json()["id"]) is None
     assert "Delete" in c.get("/account").text and "never used" not in c.get("/account").text
     assert anon.get("/api-docs").status_code == 200
+
+
+def test_ai_fix_endpoint_only_when_enabled(env, monkeypatch, docs_site):
+    from app import config, worker
+    c = TestClient(app)
+    sid = c.post("/api/scans", json={"url": f"{docs_site}/docs"}).json()["id"]
+    worker.run_once()
+    issue_id = c.get(f"/api/scans/{sid}").json()["issues"][0]["id"]
+    assert c.post(f"/api/issues/{issue_id}/suggestion").status_code == 404 and "How to fix" in c.get(f"/r/{sid}").text
+    monkeypatch.setenv("LLM_PROVIDER", "anthropic")
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "k")
+    config.reload_settings()
+    calls = []
+
+    async def fake(i):
+        calls.append(i.title)
+        return "Use 30 days everywhere."
+    monkeypatch.setattr("app.suggest.ai_suggestion", fake)
+    assert c.post(f"/api/issues/{issue_id}/suggestion").json()["text"] == "Use 30 days everywhere."
+    assert c.post(f"/api/issues/{issue_id}/suggestion").json()["text"] == "Use 30 days everywhere." and len(calls) == 1  # cached
+    assert "Use 30 days everywhere." in c.get(f"/r/{sid}").text
+
+
+def test_weekly_digest_and_unsubscribe(env, monkeypatch, docs_site):
+    from app import monitor, worker
+    out = Outbox()
+    monkeypatch.setattr("app.accounts.send_email", out)
+    monkeypatch.setattr("app.monitor.send_email", out)
+    c = TestClient(app)
+    login(c, out)
+    c.post("/account/sites", data={"url": f"{docs_site}/docs/", "interval": 30})
+    assert monitor.send_digests() == 0  # nothing scanned yet: nothing to report
+    monitor.queue_due_scans()
+    while worker.run_once():
+        pass
+    before = len(out.sent) if hasattr(out, "sent") else 0
+    assert monitor.send_digests() == 1
+    assert monitor.send_digests() == 0  # at most one a week
+    with session_scope() as s:
+        uid = s.scalars(select(User)).one().id
+    sig = monitor.digest_signature(uid)
+    assert c.get(f"/unsubscribe/{uid}/bad").status_code == 400
+    assert c.get(f"/unsubscribe/{uid}/{sig}").status_code == 200
+    assert "stopped" in c.post(f"/unsubscribe/{uid}/{sig}").text
+    from app.db import UserSetting
+    with session_scope() as s:
+        st = s.get(UserSetting, uid); st.last_digest_at = None
+    assert monitor.send_digests() == 0  # opted out
+    c.post("/account/digest", data={"on": "1"})
+    assert monitor.send_digests() == 1

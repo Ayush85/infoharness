@@ -114,3 +114,72 @@ def build_alert(url: str, scan: Scan, previous: Scan | None, new: list[Issue], t
         lines.append(f"…and {len(new) - len(shown)} more in the full report.")
     lines += ["", f"Full report: {base}/r/{scan.id}", f"Manage watched sites: {base}/account"]
     return "\n".join(lines)
+
+
+# ---------------------------------------------------------------- weekly digest
+DIGEST_DAYS = 7
+
+
+def digest_signature(user_id: int) -> str:
+    from app.auth import _sig
+    return _sig(f"digest-off.{user_id}")
+
+
+def build_digest(sites: list[dict]) -> str:
+    base = config.settings.public_base_url
+    lines = ["Your weekly docs health summary:", ""]
+    for s in sites:
+        change = ""
+        if s["prev_grade"] and s["prev_grade"] != s["grade"]:
+            change = f" (was {s['prev_grade']})"
+        lines.append(f"- {s['url']}: grade {s['grade']}{change}, {s['issues']} open problem{'s' if s['issues'] != 1 else ''}"
+                     + (f", {s['new']} new this week" if s["new"] else ""))
+        lines.append(f"    {base}/r/{s['scan_id']}")
+    lines += ["", f"Dashboard: {base}/account"]
+    return "\n".join(lines)
+
+
+def send_digests(limit: int = 50) -> int:
+    """Email each user with watched sites a weekly summary, at most once every 7 days. Returns emails sent."""
+    from app.db import UserSetting
+    now = utcnow()
+    sent = 0
+    with session_scope() as s:
+        user_ids = [r for r in s.scalars(select(Site.user_id).distinct())]
+        for uid in user_ids[:500]:
+            if sent >= limit:
+                break
+            setting = s.get(UserSetting, uid) or UserSetting(user_id=uid, digest=True)
+            last = setting.last_digest_at
+            if last is not None and last.tzinfo is None:
+                last = last.replace(tzinfo=now.tzinfo)
+            if not setting.digest or (last is not None and last > now - timedelta(days=DIGEST_DAYS)):
+                continue
+            user = s.get(User, uid)
+            rows = []
+            for site in s.scalars(select(Site).where(Site.user_id == uid).order_by(Site.id)):
+                scans = s.scalars(select(Scan).join(SiteScan, SiteScan.scan_id == Scan.id).where(
+                    SiteScan.site_id == site.id, Scan.status == "done").order_by(Scan.created_at.desc()).limit(8)).all()
+                if not scans:
+                    continue
+                cur = scans[0]
+                week_ago = next((x for x in scans[1:] if (x.created_at.replace(tzinfo=now.tzinfo) if x.created_at.tzinfo is None else x.created_at) <= now - timedelta(days=DIGEST_DAYS - 1)), None)
+                prev = week_ago or (scans[1] if len(scans) > 1 else None)
+                new = 0
+                if prev:
+                    old = {fingerprint(i) for i in s.scalars(select(Issue).where(Issue.scan_id == prev.id))}
+                    new = sum(1 for i in s.scalars(select(Issue).where(Issue.scan_id == cur.id)) if fingerprint(i) not in old)
+                rows.append({"url": site.url, "grade": cur.grade, "prev_grade": prev.grade if prev else None,
+                             "issues": (cur.summary or {}).get("total_issues", 0), "new": new, "scan_id": cur.id})
+            if not rows or not user:
+                continue
+            base = config.settings.public_base_url
+            body = build_digest(rows) + f"\n\nStop these weekly emails: {base}/unsubscribe/{uid}/{digest_signature(uid)}"
+            to = user.email
+            setting.last_digest_at = now
+            s.add(setting)
+            s.flush()
+            s.commit()
+            if send_email(to, "Your weekly docs health summary", body):
+                sent += 1
+    return sent

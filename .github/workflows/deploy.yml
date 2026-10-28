@@ -66,8 +66,15 @@ jobs:
             IdentitiesOnly yes
             StrictHostKeyChecking yes
             ServerAliveInterval 30
+            ConnectTimeout 20
+            ConnectionAttempts 3
           EOF
-          ssh server 'echo connected to $(hostname)'
+          # The server's sshd sometimes drops a connection while it is busy; retry before giving up.
+          for i in 1 2 3 4 5 6 7 8; do
+            ssh server 'echo connected to $(hostname)' && break
+            [ "$i" = 8 ] && { echo "::error::Could not reach the server over SSH after 8 tries (is it up, and is port $PORT open to GitHub?)"; exit 1; }
+            echo "SSH attempt $i failed, retrying in 20s..."; sleep 20
+          done
 
       - name: Upload code
         run: |

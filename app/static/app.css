@@ -417,3 +417,5 @@ details.more-issues>summary::-webkit-details-marker{display:none}details.more-is
 .issue.dismissed{opacity:.55}
 
 .tracker{display:flex;flex-wrap:wrap;gap:.5rem;align-items:center;margin:.8rem 0;font-size:.9rem}.tracker input,.tracker select{width:auto;min-width:11rem;padding:.45rem .6rem;font-size:.9rem}
+
+.how-fix{margin:.6rem 0}.how-fix summary{cursor:pointer;font-weight:600;font-size:.92rem}.how-fix ol{margin:.4rem 0 .4rem 1.2rem;padding:0}.how-fix li{margin:.2rem 0;color:var(--ink-soft)}.ai-fix{white-space:pre-wrap;background:var(--sheet);border:1px solid var(--line);border-radius:6px;padding:.6rem .8rem}

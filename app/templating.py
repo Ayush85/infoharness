@@ -110,3 +110,4 @@ def spark(values, w: int = 96, h: int = 22):
 
 
 templates.env.filters["spark"] = spark
+templates.env.filters["fix_steps"] = lambda i, root="": __import__("app.suggest", fromlist=["fix_steps"]).fix_steps(i, root)

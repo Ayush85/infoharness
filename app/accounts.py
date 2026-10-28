@@ -112,6 +112,9 @@ def _account_page(request: Request, me: dict, msg: str = "", err: str = "", new_
             last_two[site.id] = [(r.summary or {}).get("total_issues", 0) for r in rows[:2]]
             st = s.get(SiteSetting, site.id)
             hooks[site.id] = bool(st and st.webhook_url)
+        from app.db import UserSetting
+        st_u = s.get(UserSetting, me["id"])
+        digest_on = True if st_u is None else bool(st_u.digest)
         keys = list(s.scalars(select(ApiKey).where(ApiKey.user_id == me["id"]).order_by(ApiKey.id)))
         graded = [x for x in sites if x.last_status == "done" and x.last_score is not None]
         dash = {
@@ -123,10 +126,43 @@ def _account_page(request: Request, me: dict, msg: str = "", err: str = "", new_
                 Scan.id.in_(select(SiteScan.scan_id).where(SiteScan.site_id.in_([x.id for x in sites] or [0]))),
                 Scan.id.in_(select(ScanMeta.scan_id).where(ScanMeta.user_id == me["id"]))))),
         }
-    return _page(request, "account.html", {"keys": keys, "new_key": new_key, "trend": trend, "hooks": hooks, "last_two": last_two, "dash": dash, "sites": sites,
+    return _page(request, "account.html", {"digest_on": digest_on, "keys": keys, "new_key": new_key, "trend": trend, "hooks": hooks, "last_two": last_two, "dash": dash, "sites": sites,
                                            "limit": limit, "intervals": INTERVALS,
                                            "allowed": [30] if me["plan"] != "pro" else [1, 7, 30],
                                            "msg": msg, "err": err, "now": utcnow()})
+
+
+@router.get("/unsubscribe/{user_id}/{sig}", response_class=HTMLResponse)
+def unsubscribe_page(request: Request, user_id: int, sig: str):
+    from app.monitor import digest_signature
+    ok = hmac.compare_digest(sig, digest_signature(user_id))
+    return _page(request, "unsubscribe.html", {"ok": ok, "uid": user_id, "sig": sig, "done": False}, 200 if ok else 400)
+
+
+@router.post("/unsubscribe/{user_id}/{sig}", response_class=HTMLResponse)
+def unsubscribe(request: Request, user_id: int, sig: str):
+    from app.db import UserSetting
+    from app.monitor import digest_signature
+    if not hmac.compare_digest(sig, digest_signature(user_id)):
+        return _page(request, "unsubscribe.html", {"ok": False, "uid": user_id, "sig": sig, "done": False}, 400)
+    with session_scope() as s:
+        st = s.get(UserSetting, user_id) or UserSetting(user_id=user_id)
+        st.digest = False
+        s.add(st)
+    return _page(request, "unsubscribe.html", {"ok": True, "uid": user_id, "sig": sig, "done": True})
+
+
+@router.post("/account/digest")
+def toggle_digest(request: Request, on: str = Form("")):
+    from app.db import UserSetting
+    me = current_user(request)
+    if not me:
+        return _redirect("/login")
+    with session_scope() as s:
+        st = s.get(UserSetting, me["id"]) or UserSetting(user_id=me["id"])
+        st.digest = bool(on)
+        s.add(st)
+    return _redirect(f"/account?msg={quote('Weekly summary on.' if on else 'Weekly summary off.')}")
 
 
 @router.post("/account/api-keys", response_class=HTMLResponse)

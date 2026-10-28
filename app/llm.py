@@ -69,14 +69,14 @@ def _parse(raw: str) -> dict | None:
         return None
 
 
-async def _call(client: httpx.AsyncClient, prompt: str) -> str:
+async def _call(client: httpx.AsyncClient, prompt: str, *, system: str | None = None, max_tokens: int = 400) -> str:
     s = config.settings
     if s.llm_provider == "anthropic":
         r = await client.post(
             "https://api.anthropic.com/v1/messages",
             headers={"x-api-key": s.anthropic_api_key, "anthropic-version": "2023-06-01",
                      "content-type": "application/json"},
-            json={"model": s.llm_model, "max_tokens": 400, "system": SYSTEM,
+            json={"model": s.llm_model, "max_tokens": max_tokens, "system": system or SYSTEM,
                   "messages": [{"role": "user", "content": prompt}]},
         )
         r.raise_for_status()
@@ -84,8 +84,8 @@ async def _call(client: httpx.AsyncClient, prompt: str) -> str:
     r = await client.post(
         f"{s.openai_base_url}/chat/completions",
         headers={"Authorization": f"Bearer {s.openai_api_key}"},
-        json={"model": s.llm_model, "max_tokens": 400, "temperature": 0,
-              "messages": [{"role": "system", "content": SYSTEM}, {"role": "user", "content": prompt}]},
+        json={"model": s.llm_model, "max_tokens": max_tokens, "temperature": 0,
+              "messages": [{"role": "system", "content": system or SYSTEM}, {"role": "user", "content": prompt}]},
     )
     r.raise_for_status()
     return r.json()["choices"][0]["message"]["content"]

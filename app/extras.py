@@ -44,6 +44,33 @@ def feedback(issue_id: int, body: FeedbackIn, request: Request):
     return JSONResponse({"ok": True})
 
 
+@router.post("/api/issues/{issue_id}/suggestion")
+async def ai_fix(issue_id: int, request: Request):
+    """AI-written fix for one finding (only when an LLM is configured). Cached on the finding."""
+    from app import suggest
+    if not config.settings.llm_enabled:
+        raise HTTPException(404, "AI suggestions are not enabled.")
+    who = client_hash(request)
+    with session_scope() as s:
+        issue = s.get(Issue, issue_id)
+        if issue is None:
+            raise HTTPException(404, "Finding not found.")
+        cached = (issue.extra or {}).get("ai_fix")
+        if cached:
+            return JSONResponse({"text": cached})
+        used = s.scalar(select(func.count()).select_from(Scan).where(Scan.client_hash == who, Scan.created_at >= utcnow() - timedelta(days=1)))
+        snapshot = type("I", (), dict(title=issue.title, detail=issue.detail, quote_a=issue.quote_a, quote_b=issue.quote_b,
+                                      page_a=issue.page_a, page_b=issue.page_b))()
+    text = await suggest.ai_suggestion(snapshot)
+    if not text:
+        raise HTTPException(502, "Could not get a suggestion right now.")
+    with session_scope() as s:
+        issue = s.get(Issue, issue_id)
+        if issue:
+            issue.extra = {**(issue.extra or {}), "ai_fix": text}
+    return JSONResponse({"text": text})
+
+
 def _is_admin(request: Request) -> bool:
     me = current_user(request)
     return bool(me and me["email"] in config.settings.admins)

@@ -87,6 +87,17 @@
     window.open(url, "_blank", "noopener");
   }));
 
+  // AI-written fix: only shown when the server has a model configured.
+  document.querySelectorAll("[data-ai-fix]").forEach((b) => b.addEventListener("click", async () => {
+    const out = b.nextElementSibling; b.disabled = true; b.textContent = "Thinking…";
+    try {
+      const res = await fetch(`/api/issues/${b.dataset.aiFix}/suggestion`, { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) throw new Error();
+      out.textContent = data.text; out.hidden = false; b.remove();
+    } catch (e) { b.disabled = false; b.textContent = "Try again"; }
+  }));
+
   // "Not a problem": one tap, no form. Tells us which checks raise false alarms.
   document.querySelectorAll("[data-feedback]").forEach((b) => b.addEventListener("click", async () => {
     const label = b.textContent;

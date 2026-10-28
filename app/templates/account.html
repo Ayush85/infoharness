@@ -66,6 +66,12 @@
   </form>
   {% else %}<p class="form-note">You're using all {{ limit }} watched site{{ 's' if limit != 1 }}.</p>{% endif %}
 
+  <form method="post" action="/account/digest" class="panel" style="margin-top:28px">
+    <h2 style="font-size:1.15rem">Weekly summary</h2>
+    <p class="form-note" style="margin-top:0">One email a week with the grade, open problems and new problems for each watched site. Alerts about new problems are separate and stay on.</p>
+    {% if digest_on %}<button class="secondary" type="submit">Turn weekly summary off</button>{% else %}<input type="hidden" name="on" value="1"><button type="submit">Turn weekly summary on</button>{% endif %}
+  </form>
+
   <section class="panel" id="api-keys" style="margin-top:28px">
     <h2 style="font-size:1.15rem">API keys</h2>
     <p class="form-note" style="margin-top:0">Scan from your own scripts or CI. Keys get your higher limits. See the <a href="/api-docs">API docs</a>.</p>
