@@ -80,9 +80,10 @@
 <section class="section" id="guides">
   <div class="wrap">
     <div class="section-head"><h2>Guides</h2><p>Short reads on keeping documentation accurate.</p></div>
-    <ul class="sites guide-list" style="margin-top:0">
-      {% for g in guides %}<li class="panel"><h3><a href="/guides/{{ g.slug }}">{{ g.title }}</a></h3><p style="margin:6px 0 0;color:var(--ink-soft);font-size:.96rem">{{ g.summary }}</p></li>{% endfor %}
+    <ul class="sites guide-list grid2" style="margin-top:0">
+      {% for g in guides[:4] %}<li class="panel"><h3><a href="/guides/{{ g.slug }}">{{ g.title }}</a></h3><p style="margin:6px 0 0;color:var(--ink-soft);font-size:.96rem">{{ g.summary }}</p></li>{% endfor %}
     </ul>
+    <p class="more"><a href="/guides">All {{ guides|length }} guides</a></p>
   </div>
 </section>
 

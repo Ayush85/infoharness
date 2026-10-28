@@ -20,25 +20,28 @@
     <h1><a href="{{ scan.url }}" rel="nofollow noopener" target="_blank">{{ shown }}</a></h1>
     {% if scan.status == 'done' %}
     <p class="report-meta">{{ scan.pages_crawled }} pages read{% if scan.summary.pages_found and scan.summary.pages_found > scan.pages_crawled %} of {{ scan.summary.pages_found }} found{% endif %}{% if scan.finished_at %} on {{ scan.finished_at.strftime('%d %b %Y') }}{% endif %}.
-      {% if scan.summary.links_checked %}{{ scan.summary.links_checked }} links checked.{% endif %}
+      {% if scan.summary.links_checked %}{{ scan.summary.links_checked }} link{{ "" if scan.summary.links_checked == 1 else "s" }} checked.{% endif %}
       {% if not scan.summary.llm_verified %}Contradictions come from pattern matching, so give each a quick look before you act on it.{% endif %}</p>
     {% if diff %}<p class="notice coverage-note diff">Since the <a href="/r/{{ diff.prev_id }}">previous scan</a> ({{ diff.prev_when.strftime('%d %b %Y') }}, grade {{ diff.prev_grade }}): <strong>{{ diff.new }} new</strong> and <strong>{{ diff.fixed }} fixed</strong>.
       {% if diff.prev_pages and (scan.pages_crawled - diff.prev_pages)|abs > diff.prev_pages * 0.25 %}<span class="sub">The previous scan read {{ diff.prev_pages }} pages and this one read {{ scan.pages_crawled }}, so many "new" problems are on pages we had not reached before.</span>{% endif %}</p>{% endif %}
     {% if scan.summary.partial or scan.summary.links_skipped or scan.summary.rendered_pages %}
-    <div class="notice coverage" role="note"><strong>What this scan covered</strong>
+    <div class="notice coverage{% if not (scan.summary.partial or scan.summary.rendered_pages) %} quiet{% endif %}" role="note"><strong>What this scan covered</strong>
       <ul>
         {% if scan.summary.partial %}<li>{{ scan.pages_crawled }} of {{ scan.summary.pages_found or scan.pages_crawled }} pages found were read, so this is a sample, not the whole site. Orphan pages are skipped because we can't tell what the unread pages link to.
           {% if not me and settings().pro_max_pages > settings().max_pages %}<a href="/login">Sign in (free)</a> to scan up to {{ settings().pro_max_pages }} pages.{% endif %}</li>{% endif %}
         {% if scan.summary.rendered_pages %}<li>{{ scan.summary.rendered_pages }} pages draw their text with JavaScript, so we opened them in a browser to read them.</li>{% endif %}
-        {% if scan.summary.links_skipped %}<li>{{ scan.summary.links_skipped }} links were not checked: large sites such as Google, Facebook or LinkedIn block automated checks, or the link limit was reached.</li>{% endif %}
+        {% if scan.summary.links_skipped %}<li>{{ scan.summary.links_skipped }} link{{ "" if scan.summary.links_skipped == 1 else "s" }} not checked: large sites such as Google, Facebook or LinkedIn block automated checks, or the link limit was reached.</li>{% endif %}
       </ul></div>
     {% endif %}
     <div class="report-actions">
       <button type="button" class="secondary" data-copy-text="{{ share_url }}">Copy report link</button>
-      <a class="button secondary" href="/r/{{ scan.id }}/export.csv" download>Download CSV</a>
-      {% if report_md %}<button type="button" class="secondary" data-copy-from="report-md">Copy as Markdown</button>{% endif %}
-      <a class="button secondary" href="/api/scans/{{ scan.id }}" download="docs-health-{{ scan.id }}.json">Download JSON</a>
-      <button type="button" class="secondary" data-print>Print or save as PDF</button>
+      <details class="menu"><summary class="button secondary">Export</summary>
+        <div class="menu-list">
+          <a href="/r/{{ scan.id }}/export.csv" download>Download CSV</a>
+          {% if report_md %}<button type="button" data-copy-from="report-md">Copy as Markdown</button>{% endif %}
+          <a href="/api/scans/{{ scan.id }}" download="docs-health-{{ scan.id }}.json">Download JSON</a>
+          <button type="button" data-print>Print or save as PDF</button>
+        </div></details>
     </div>
     {% endif %}
   </section>
@@ -93,11 +96,13 @@
     {% endfor %}
   </div>
 
+  <details class="tracker-box"><summary>Send findings to GitHub or Linear</summary>
   <div class="tracker" role="group" aria-label="Create issues in your tracker">
     <label for="tracker-kind">Create issues in</label>
     <select id="tracker-kind"><option value="github">GitHub</option><option value="linear">Linear</option></select>
     <input id="tracker-repo" type="text" placeholder="owner/repo" aria-label="GitHub repository" autocomplete="off" spellcheck="false">
-  </div>
+    <span class="hint">Then use "Create issue" on any finding.</span>
+  </div></details>
 
   {% for type, items in grouped %}
   <section class="group" id="{{ type }}" data-group="{{ type }}">
@@ -139,12 +144,12 @@
           {% if i.extra and i.extra.ai_fix %}<p class="ai-fix"><strong>Suggestion:</strong> {{ i.extra.ai_fix }}</p>
           {% elif settings().llm_enabled %}<button type="button" class="secondary small" data-ai-fix="{{ i.id }}">Suggest wording (AI)</button><p class="ai-fix" hidden></p>{% endif %}
         </details>{% endif %}
-        <div class="issue-foot"><button type="button" class="secondary small" data-copy-text="{{ i|issue_md(scan.root) }}">Copy as task</button>
-          <button type="button" class="secondary small" data-create-issue>Create issue</button>
-          <button type="button" class="secondary small" data-feedback="{{ i.id }}" title="Tell us this finding is wrong, so we can fix the check">Not a problem</button>
+        <div class="issue-foot"><button type="button" class="ghost" data-copy-text="{{ i|issue_md(scan.root) }}">Copy as task</button>
+          <button type="button" class="ghost" data-create-issue>Create issue</button>
+          <button type="button" class="ghost" data-feedback="{{ i.id }}" title="Tell us this finding is wrong, so we can fix the check">Not a problem</button>
           {% if owner_site %}<form method="post" action="/r/{{ scan.id }}/ignore" class="inline"><input type="hidden" name="issue_id" value="{{ i.id }}">
-            {% if i.id in ignored_ids %}<input type="hidden" name="undo" value="1"><button type="submit" class="secondary small">Stop ignoring</button>
-            {% else %}<button type="submit" class="secondary small" title="No more alerts about this one">Ignore</button>{% endif %}</form>{% endif %}</div>
+            {% if i.id in ignored_ids %}<input type="hidden" name="undo" value="1"><button type="submit" class="ghost">Stop ignoring</button>
+            {% else %}<button type="submit" class="ghost" title="No more alerts about this one">Ignore</button>{% endif %}</form>{% endif %}</div>
       </li>
     {% endfor %}
     </ol>{% if items|length > 10 %}</details>{% endif %}

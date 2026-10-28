@@ -1,12 +1,16 @@
 {% extends "base.html" %}
+{% from "_scan_form.html" import scan_form with context %}
 {% block title %}Free docs and knowledge base checkers · infoharness{% endblock %}
 {% block description %}Free checkers for documentation and help centers: broken links, duplicate content, outdated pages, contradictions, orphan pages and knowledge base quality for AI assistants.{% endblock %}
 {% block content %}
 <div class="wrap page">
   <h1>Free documentation and knowledge base checkers</h1>
-  <p class="lede">One scanner, framed for the job you came to do. Each reads your public docs and returns a graded report.</p>
-  <ul class="sites guide-list">
-    {% for t in tools %}<li class="panel"><h2 style="font-size:1.3rem"><a href="/tools/{{ t.slug }}">{{ t.h1 }}</a></h2><p style="margin:8px 0 0;color:var(--ink-soft)">{{ t.description }}</p></li>{% endfor %}
+  <p class="lede">Every checker runs the same scan and returns the same graded report. Paste your address to run all of them at once, or open one to see what it looks for.</p>
+  {{ scan_form("tools") }}
+  <h2 class="tools-h">Or start from the problem you have</h2>
+  <ul class="sites guide-list grid2">
+    {% for t in tools %}<li class="panel tool-card"><h3><a href="/tools/{{ t.slug }}">{{ t.h1 }}</a></h3><p>{{ t.description }}</p></li>{% endfor %}
   </ul>
 </div>
 {% endblock %}
+{% block scripts %}<script src="/static/index.js?v={{ version }}" defer></script>{% endblock %}
