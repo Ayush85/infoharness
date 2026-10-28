@@ -9,7 +9,7 @@ import re
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
-from urllib.parse import urljoin, urldefrag
+from urllib.parse import urljoin, urldefrag, urlsplit
 
 from bs4 import BeautifulSoup, Comment, Tag
 
@@ -39,6 +39,7 @@ class Extracted:
     link_ctx: dict[str, dict] = field(default_factory=dict)
     last_modified: datetime | None = None
     word_count: int = 0
+    lang: str = ""
 
     @property
     def text(self) -> str:
@@ -109,9 +110,53 @@ def _is_chrome(tag: Tag) -> bool:
     return bool(attrs and CHROME_HINTS.search(attrs))
 
 
+LANG_IN_PATH = re.compile(r"^/([a-z]{2})(?:[-_][a-z]{2,4})?(?:/|$)", re.I)
+
+
+def page_language(declared: str | None, url: str) -> str:
+    """Primary language subtag ('en', 'fr'): from <html lang>, else from a /fr/ style path segment, else ''."""
+    d = (declared or "").strip().lower().replace("_", "-").split("-")[0]
+    if re.fullmatch(r"[a-z]{2,3}", d) and d != "x":
+        return d
+    m = LANG_IN_PATH.match(urlsplit(url).path)
+    return m.group(1).lower() if m else ""
+
+
+def extract_pdf(data: bytes, url: str, max_pages: int = 60) -> Extracted:
+    """Text of a PDF as paragraph blocks. Raises on unreadable files; the caller treats that as 'no content'."""
+    import io
+
+    from pypdf import PdfReader
+    reader = PdfReader(io.BytesIO(data))
+    if reader.is_encrypted:
+        raise ValueError("encrypted PDF")
+    out = Extracted()
+    meta = reader.metadata
+    out.title = _clean(getattr(meta, "title", "") or "") if meta else ""
+    chunks = []
+    for page in reader.pages[:max_pages]:
+        chunks.append(page.extract_text() or "")
+    text = "\n".join(chunks)
+    for para in re.split(r"\n\s*\n|(?<=[.!?])\n(?=[A-Z0-9])", text):
+        para = _clean(para)
+        if len(para.split()) >= 4:
+            out.blocks.append(Block(text=para, heading="", kind="text"))
+    if not out.title:
+        first = out.blocks[0].text if out.blocks else ""
+        out.title = first[:80]
+    out.word_count = sum(len(b.text.split()) for b in out.blocks)
+    mod = getattr(meta, "modification_date", None) if meta else None
+    out.last_modified = mod if isinstance(mod, datetime) else None
+    if out.last_modified is not None and out.last_modified.tzinfo is None:
+        out.last_modified = out.last_modified.replace(tzinfo=timezone.utc)
+    return out
+
+
 def extract(html: str, base_url: str, header_last_modified: str | None = None) -> Extracted:
     soup = BeautifulSoup(html, "lxml")
     out = Extracted()
+    html_tag = soup.find("html")
+    out.lang = page_language(html_tag.get("lang") if html_tag else None, base_url)
 
     # Links come from the whole page (nav links count as "inbound links" for orphan detection).
     seen = set()

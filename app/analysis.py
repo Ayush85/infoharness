@@ -30,10 +30,16 @@ class PageDoc:
     from_sitemap: bool = False
     inbound: int = 0
     last_modified: datetime | None = None
+    lang: str = ""
 
     @property
     def text(self) -> str:
         return "\n".join(b.text for b in self.blocks if b.kind == "text")
+
+
+def different_languages(a: "PageDoc", b: "PageDoc") -> bool:
+    """Translations of one page differ in every sentence. Pages are only compared within one language."""
+    return bool(a.lang and b.lang and a.lang != b.lang)
 
 
 @dataclass
@@ -203,8 +209,9 @@ def check_duplicate_pages(pages: list[PageDoc], *, threshold: float = 0.9) -> tu
 
     dup_pairs: set[tuple[int, int]] = set()
     for pc in pairs:
-        if same_family(pages[eligible[pc.a]].url, pages[eligible[pc.b]].url):
-            continue  # a tab/platform view or another version of the same page
+        if same_family(pages[eligible[pc.a]].url, pages[eligible[pc.b]].url) or \
+                different_languages(pages[eligible[pc.a]], pages[eligible[pc.b]]):
+            continue  # a tab/platform view, another version, or a translation
         parent[find(pc.a)] = find(pc.b)
         dup_pairs.add((eligible[pc.a], eligible[pc.b]))
     clusters: dict[int, list[int]] = defaultdict(list)
@@ -367,7 +374,8 @@ def numeric_conflicts(facts: list[Fact], *, min_jaccard: float = 0.5, min_shared
                     continue
                 if pages is not None:
                     pa, pb = pages[fi.page], pages[fj.page]
-                    if same_family(pa.url, pb.url) or is_historical(pa.url) or is_historical(pb.url):
+                    if same_family(pa.url, pb.url) or is_historical(pa.url) or is_historical(pb.url) \
+                            or different_languages(pa, pb):
                         continue
                     if unit in TASK_UNITS and _title_overlap(pa.title, pb.title) < 0.5:
                         continue  # durations of different tasks, not a contradiction

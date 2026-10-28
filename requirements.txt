@@ -13,3 +13,4 @@ MarkupSafe==3.0.3
 scikit-learn==1.9.1
 numpy==2.5.3
 python-multipart==0.0.32
+pypdf==6.21.3

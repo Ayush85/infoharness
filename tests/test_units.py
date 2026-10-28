@@ -153,3 +153,36 @@ def test_fix_steps_cover_every_finding_type():
         steps = fix_steps(Finding(type=t, severity="low", title="x", page_a="https://x.com/a", page_b="https://x.com/b", extra=ex))
         assert 1 <= len(steps) <= 5 and all(isinstance(s, str) and s for s in steps), t
     assert "once in the template" in fix_steps(Finding(type="broken_link", severity="low", title="x", extra={"internal": True, "site_wide": True, "sources_total": 40}))[0]
+
+
+def _tiny_pdf(text: str) -> bytes:
+    objs = ["<< /Type /Catalog /Pages 2 0 R >>", "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+            "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R "
+            "/Resources << /Font << /F1 5 0 R >> >> >>",
+            None, "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>"]
+    stream = f"BT /F1 12 Tf 72 700 Td ({text}) Tj ET"
+    objs[3] = f"<< /Length {len(stream)} >>\nstream\n{stream}\nendstream"
+    out, offs = b"%PDF-1.4\n", []
+    for i, o in enumerate(objs, 1):
+        offs.append(len(out))
+        out += f"{i} 0 obj\n{o}\nendobj\n".encode()
+    xref = len(out)
+    out += f"xref\n0 {len(objs)+1}\n0000000000 65535 f \n".encode()
+    for o in offs:
+        out += f"{o:010d} 00000 n \n".encode()
+    out += f"trailer\n<< /Size {len(objs)+1} /Root 1 0 R >>\nstartxref\n{xref}\n%%EOF".encode()
+    return out
+
+
+def test_pdf_text_extracted():
+    from app.extract import extract_pdf
+    ex = extract_pdf(_tiny_pdf("Refunds are available within 30 days of purchase."), "https://x.test/a.pdf")
+    assert "30 days" in " ".join(b.text for b in ex.blocks)
+
+
+def test_cross_language_pages_not_compared():
+    from app.analysis import PageDoc, different_languages
+    a = PageDoc(url="https://x.test/en/a", title="a", blocks=[], word_count=0, lang="en")
+    b = PageDoc(url="https://x.test/de/a", title="a", blocks=[], word_count=0, lang="de")
+    c = PageDoc(url="https://x.test/b", title="b", blocks=[], word_count=0, lang="")
+    assert different_languages(a, b) and not different_languages(a, c)

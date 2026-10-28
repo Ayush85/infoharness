@@ -72,7 +72,11 @@ jobs:
           # The server's sshd sometimes drops a connection while it is busy; retry before giving up.
           for i in 1 2 3 4 5 6 7 8; do
             ssh server 'echo connected to $(hostname)' && break
-            [ "$i" = 8 ] && { echo "::error::Could not reach the server over SSH after 8 tries (is it up, and is port $PORT open to GitHub?)"; exit 1; }
+            if [ "$i" = 8 ]; then
+              echo "::group::ssh debug (no secrets are printed)"; ssh -vv server true 2>&1 | grep -Ei "connect|banner|permission|denied|identity|offering|authenticat|host key|refused|timed out|no route" | head -25; echo "::endgroup::"
+              echo "::error::Could not reach the server over SSH after 8 tries. If the log says Permission denied, DEPLOY_SSH_KEY does not match the server (re-run scripts/setup-deploy-access.sh and paste the new private key); if it says timed out or refused, the server or port $PORT is not reachable from GitHub."
+              exit 1
+            fi
             echo "SSH attempt $i failed, retrying in 20s..."; sleep 20
           done
 

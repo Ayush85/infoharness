@@ -13,13 +13,13 @@ import httpx
 
 from app import config
 from app import render
-from app.extract import Extracted, extract
+from app.extract import Extracted, extract, extract_pdf
 from app.security import UnsafeURL, check_url_safe
 
 log = logging.getLogger(__name__)
 
 SKIP_EXT = re.compile(
-    r"\.(pdf|png|jpe?g|gif|webp|svg|ico|zip|gz|tgz|tar|rar|7z|mp4|mp3|wav|mov|avi|woff2?|ttf|eot|css|js|json|"
+    r"\.(png|jpe?g|gif|webp|svg|ico|zip|gz|tgz|tar|rar|7z|mp4|mp3|wav|mov|avi|woff2?|ttf|eot|css|js|json|"
     r"xml|rss|atom|csv|xlsx?|docx?|pptx?|dmg|exe|apk|bin|iso)$", re.I)
 TRACKING_PARAMS = re.compile(r"^(utm_.*|ref|ref_src|gclid|fbclid|mc_cid|mc_eid|_hsenc|_hsmi)$", re.I)
 LOC_RE = re.compile(r"<loc>\s*(.*?)\s*</loc>", re.I | re.S)
@@ -50,6 +50,7 @@ class FetchResult:
     status: int
     content_type: str = ""
     text: str | None = None
+    data: bytes | None = None  # body of a PDF
     last_modified: str | None = None
     error: str | None = None
 
@@ -94,6 +95,7 @@ class Crawler:
         self.robots: RobotFileParser | None = None
         self.result = CrawlResult(start_url=self.start_url, root=self.root)
         self._queued: set[str] = set()
+        self._pdf_budget = config.settings.max_pdfs
         self._renderer: render.Renderer | None = render.Renderer(config.settings.user_agent) if render.available() else None
         self._sem = asyncio.Semaphore(s.crawl_concurrency)
 
@@ -160,6 +162,17 @@ class Crawler:
                         res.text = raw.decode(enc, errors="replace")
                     except LookupError:
                         res.text = raw.decode("utf-8", errors="replace")
+                elif want_body and method == "GET" and resp.status_code < 400 and "pdf" in ctype \
+                        and self._pdf_budget > 0:
+                    self._pdf_budget -= 1
+                    chunks, size = [], 0
+                    async for chunk in resp.aiter_bytes():
+                        size += len(chunk)
+                        if size > s.max_pdf_bytes:
+                            chunks = []  # too big: skip the body rather than read half a file
+                            break
+                        chunks.append(chunk)
+                    res.data = b"".join(chunks) or None
                 return res
             finally:
                 await resp.aclose()
@@ -280,7 +293,14 @@ class Crawler:
                 page = CrawledPage(url=url, status=res.status, from_sitemap=url in self.result.sitemap_urls,
                                    error=res.error)
                 final_n = normalize(res.final_url)
-                if res.text and res.status < 400 and ("html" in res.content_type or "xml" not in res.content_type):
+                if res.data:
+                    try:
+                        page.extracted = await asyncio.to_thread(extract_pdf, res.data, res.final_url)
+                        if page.extracted.word_count < 20:
+                            page.extracted = None  # scanned image or empty PDF: nothing to compare
+                    except Exception as e:  # corrupt or encrypted PDFs are simply skipped
+                        log.info("pdf skipped %s: %s", url, type(e).__name__)
+                elif res.text and res.status < 400 and ("html" in res.content_type or "xml" not in res.content_type):
                     try:
                         page.extracted = extract(res.text, res.final_url, res.last_modified)
                         if self._renderer and render.needs_render(res.text, page.extracted.word_count):

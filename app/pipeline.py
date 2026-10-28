@@ -8,7 +8,7 @@ from urllib.parse import urlsplit
 
 from app import config, embeddings, llm
 from app.analysis import (Finding, PageDoc, build_chunks, check_duplicate_pages, check_duplicate_sections,
-                          check_orphans, check_staleness, NON_DOC_EXT, check_thin_pages, extract_facts, numeric_conflicts,
+                          check_orphans, check_staleness, NON_DOC_EXT, different_languages, check_thin_pages, extract_facts, numeric_conflicts,
                           numeric_finding, top_pairs, _short)
 from app.analysis import admin_target_kind
 from app.crawler import CrawlResult, Crawler, _bare_host, check_links, is_bot_hostile
@@ -141,7 +141,7 @@ async def _run(url: str, prog: Progress, max_pages: int | None = None) -> tuple[
     pages = [PageDoc(url=p.url, title=p.extracted.title, blocks=p.extracted.blocks,
                      word_count=p.extracted.word_count, link_count=len(p.extracted.links),
                      from_sitemap=p.from_sitemap, inbound=inbound.get(p.url, 0),
-                     last_modified=p.extracted.last_modified)
+                     last_modified=p.extracted.last_modified, lang=p.extracted.lang)
              for p in ok_pages]
     pages.sort(key=lambda p: p.url)
     findings: list[Finding] = []
@@ -156,6 +156,7 @@ async def _run(url: str, prog: Progress, max_pages: int | None = None) -> tuple[
         matrix = await asyncio.to_thread(embeddings.embed, [f"{c.heading}\n{c.text}" for c in chunks])
         pairs = await asyncio.to_thread(top_pairs, matrix, [c.page for c in chunks],
                                         lo=band["semantic_lo"], hi=1.01, k=4)
+        pairs = [pc for pc in pairs if not different_languages(pages[chunks[pc.a].page], pages[chunks[pc.b].page])]
     findings += check_duplicate_sections(chunks, pages, pairs, dup_page_pairs, threshold=band["dup"])
 
     # ---- contradictions
