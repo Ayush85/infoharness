@@ -1,0 +1,51 @@
+name: "Docs health check"
+description: "Scan a documentation site or help center with infoharness and fail the job when its grade (A to F) drops below a threshold."
+author: "infoharness"
+branding:
+  icon: "check-circle"
+  color: "blue"
+inputs:
+  url:
+    description: "Address of the docs or help center to scan, for example https://docs.example.com"
+    required: true
+  fail-below:
+    description: "Fail the job when the grade is worse than this (A, B, C, D or F). Leave empty to never fail."
+    required: false
+    default: "C"
+  api-key:
+    description: "Optional infoharness API key (free, from your account page). Keys get higher limits."
+    required: false
+    default: ""
+  max-wait:
+    description: "Seconds to wait for the scan to finish."
+    required: false
+    default: "900"
+  fresh:
+    description: "Scan again even if the site was scanned in the last 24 hours."
+    required: false
+    default: "true"
+outputs:
+  grade:
+    description: "Letter grade, A to F"
+    value: ${{ steps.scan.outputs.grade }}
+  score:
+    description: "Score from 0 to 100"
+    value: ${{ steps.scan.outputs.score }}
+  issues:
+    description: "Number of findings"
+    value: ${{ steps.scan.outputs.issues }}
+  report-url:
+    description: "Link to the full report"
+    value: ${{ steps.scan.outputs.report-url }}
+runs:
+  using: "composite"
+  steps:
+    - id: scan
+      shell: bash
+      env:
+        INPUT_URL: ${{ inputs.url }}
+        INPUT_FAIL_BELOW: ${{ inputs.fail-below }}
+        INPUT_API_KEY: ${{ inputs.api-key }}
+        INPUT_MAX_WAIT: ${{ inputs.max-wait }}
+        INPUT_FRESH: ${{ inputs.fresh }}
+      run: python3 "${{ github.action_path }}/ci_check.py"

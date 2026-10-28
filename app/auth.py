@@ -65,6 +65,26 @@ def current_user(request: Request) -> dict | None:
         return {"id": u.id, "email": u.email, "plan": effective_plan(u)} if u else None
 
 
+def api_user(request: Request) -> dict | None:
+    """The account behind an `Authorization: Bearer ih_...` API key, or None."""
+    import hashlib as _h
+    from app.db import ApiKey
+    header = request.headers.get("authorization", "")
+    if not header.lower().startswith("bearer "):
+        return None
+    key = header[7:].strip()
+    if not key.startswith("ih_") or len(key) > 100:
+        return None
+    digest = _h.sha256(key.encode()).hexdigest()
+    with session_scope() as s:
+        row = s.scalar(select(ApiKey).where(ApiKey.key_hash == digest))
+        if row is None:
+            return None
+        row.last_used_at = utcnow()
+        u = s.get(User, row.user_id)
+        return {"id": u.id, "email": u.email, "plan": effective_plan(u)} if u else None
+
+
 def effective_plan(user: User) -> str:
     if not config.settings.paid_plans:
         return "pro"  # the product is free: every signed-in user gets the full limits

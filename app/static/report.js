@@ -68,6 +68,25 @@
     b.addEventListener("click", () => copy(document.getElementById(b.dataset.copyFrom).value, b)));
   document.querySelectorAll("[data-print]").forEach((b) => b.addEventListener("click", () => window.print()));
 
+  // "Create issue": opens a prefilled new issue in GitHub or Linear. Nothing is sent from our server.
+  const kind = document.getElementById("tracker-kind"), repo = document.getElementById("tracker-repo");
+  try { kind.value = localStorage.getItem("ih_tracker") || "github"; repo.value = localStorage.getItem("ih_repo") || ""; } catch (e) {}
+  const syncTracker = () => { repo.hidden = kind.value !== "github"; try { localStorage.setItem("ih_tracker", kind.value); localStorage.setItem("ih_repo", repo.value.trim()); } catch (e) {} };
+  if (kind && repo) { kind.addEventListener("change", syncTracker); repo.addEventListener("input", syncTracker); syncTracker(); }
+  document.querySelectorAll("[data-create-issue]").forEach((b) => b.addEventListener("click", () => {
+    const card = b.closest(".issue");
+    const title = "Docs: " + card.querySelector("h3").textContent.replace(/\s+/g, " ").replace(/\b(New|Ignored)$/, "").trim();
+    const body = card.querySelector("[data-copy-text]").dataset.copyText + "\n\nFound by infoharness: " + location.href.split("#")[0];
+    let url;
+    if (kind.value === "linear") url = "https://linear.app/new?title=" + encodeURIComponent(title) + "&description=" + encodeURIComponent(body);
+    else {
+      const r = repo.value.trim();
+      if (!/^[\w.-]+\/[\w.-]+$/.test(r)) { repo.focus(); repo.setCustomValidity("Enter the repository as owner/repo"); repo.reportValidity(); setTimeout(() => repo.setCustomValidity(""), 2500); return; }
+      url = "https://github.com/" + r + "/issues/new?title=" + encodeURIComponent(title) + "&body=" + encodeURIComponent(body);
+    }
+    window.open(url, "_blank", "noopener");
+  }));
+
   // "Not a problem": one tap, no form. Tells us which checks raise false alarms.
   document.querySelectorAll("[data-feedback]").forEach((b) => b.addEventListener("click", async () => {
     const label = b.textContent;

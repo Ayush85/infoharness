@@ -19,7 +19,7 @@ from sqlalchemy import func, select
 from app import __version__, config
 from app.crawler import normalize
 from app.db import IgnoredIssue, Issue, Scan, ScanMeta, Site, SiteScan, init_engine, session_scope, utcnow
-from app.auth import client_hash, current_user
+from app.auth import api_user, client_hash, current_user
 from app.scoring import TYPE_LABELS
 from app.templating import report_md, templates, verdict, verdict_sub
 from app import accounts, extras, seo
@@ -165,6 +165,7 @@ async def create_scan(body: ScanIn, request: Request):
     key = normalize(url)
     who = client_hash(request)
     now = utcnow()
+    me = current_user(request) or api_user(request)
     with session_scope() as db:
         # Recent result for the same URL? Return it instead of re-crawling.
         if not body.fresh:
@@ -175,13 +176,12 @@ async def create_scan(body: ScanIn, request: Request):
                 return JSONResponse({"id": recent.id, "cached": True, "report_url": f"/r/{recent.id}"})
         used = db.scalar(select(func.count()).select_from(Scan).where(
             Scan.client_hash == who, Scan.created_at >= now - timedelta(days=1)))
-        if used >= s.scans_per_ip_per_day:
+        if not me and used >= s.scans_per_ip_per_day:
             raise HTTPException(429, f"You've reached the limit of {s.scans_per_ip_per_day} scans per day. "
                                      "Try again tomorrow.")
         waiting = db.scalar(select(func.count()).select_from(Scan).where(Scan.status == "queued"))
         if waiting >= s.max_queue:
             raise HTTPException(503, "We're busy scanning other sites right now. Try again in a few minutes.")
-        me = current_user(request)
         if me:
             mine = db.scalar(select(func.count()).select_from(ScanMeta).join(Scan, Scan.id == ScanMeta.scan_id).where(
                 ScanMeta.user_id == me["id"], Scan.created_at >= now - timedelta(days=1)))

@@ -93,6 +93,12 @@
     {% endfor %}
   </div>
 
+  <div class="tracker" role="group" aria-label="Create issues in your tracker">
+    <label for="tracker-kind">Create issues in</label>
+    <select id="tracker-kind"><option value="github">GitHub</option><option value="linear">Linear</option></select>
+    <input id="tracker-repo" type="text" placeholder="owner/repo" aria-label="GitHub repository" autocomplete="off" spellcheck="false">
+  </div>
+
   {% for type, items in grouped %}
   <section class="group" id="{{ type }}" data-group="{{ type }}">
     <div class="group-head"><h2>{{ type_labels[type] }}</h2><span class="count">{{ items|length }}</span></div>
@@ -129,6 +135,7 @@
           </ul>
         {% endif %}
         <div class="issue-foot"><button type="button" class="secondary small" data-copy-text="{{ i|issue_md(scan.root) }}">Copy as task</button>
+          <button type="button" class="secondary small" data-create-issue>Create issue</button>
           <button type="button" class="secondary small" data-feedback="{{ i.id }}" title="Tell us this finding is wrong, so we can fix the check">Not a problem</button>
           {% if owner_site %}<form method="post" action="/r/{{ scan.id }}/ignore" class="inline"><input type="hidden" name="issue_id" value="{{ i.id }}">
             {% if i.id in ignored_ids %}<input type="hidden" name="undo" value="1"><button type="submit" class="secondary small">Stop ignoring</button>

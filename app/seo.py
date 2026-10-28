@@ -59,7 +59,7 @@ from app.seo_pages import NEW_GUIDES, TOOL_BY_SLUG, TOOLS  # noqa: E402
 GUIDES += NEW_GUIDES
 BY_SLUG = {g["slug"]: g for g in GUIDES}
 PRIVATE = ("/api/", "/account", "/login", "/logout", "/webhooks/")
-STATIC_URLS = ["/", "/pricing", "/tools", "/guides", "/reports", "/bot", "/contact", "/privacy", "/terms"]
+STATIC_URLS = ["/", "/pricing", "/api-docs", "/tools", "/guides", "/reports", "/bot", "/contact", "/privacy", "/terms"]
 
 
 def _base() -> str:
@@ -137,6 +137,7 @@ def llms():
 ## Pages
 - [Scan a site]({_base()}/): the scanner
 - [Free]({_base()}/pricing): everything is free, including scheduled monitoring and alerts
+- [API]({_base()}/api-docs): scan a site and read the graded result as JSON
 - [Public reports]({_base()}/reports): latest docs-health grade for every publicly scanned site
 - [About the crawler]({_base()}/bot): user agent `InfoharnessBot`, how to block it
 
@@ -188,6 +189,13 @@ def guide(request: Request, slug: str):
         return templates.TemplateResponse(request, "notfound.html", status_code=404)
     others = [x for x in GUIDES if x["slug"] != slug]
     return templates.TemplateResponse(request, f"guides/{slug}.html", {"guide": g, "others": others})
+
+
+@router.get("/api-docs", response_class=HTMLResponse)
+def api_docs(request: Request):
+    s = config.settings
+    return templates.TemplateResponse(request, "api_docs.html", {
+        "ip_limit": s.scans_per_ip_per_day, "user_limit": s.scans_per_user_per_day, "key_pages": s.pro_max_pages, "max_pages": s.max_pages})
 
 
 @router.get("/contact", response_class=HTMLResponse)

@@ -263,3 +263,24 @@ def test_feedback_and_admin_view(env, monkeypatch, docs_site):
     login(admin, out, email="admin@example.com")
     page = admin.get("/admin/feedback").text
     assert "Finding feedback" in page and "not a problem" in page
+
+
+def test_api_keys(env, monkeypatch, docs_site):
+    out = Outbox()
+    monkeypatch.setattr("app.accounts.send_email", out)
+    c = TestClient(app)
+    login(c, out)
+    page = c.post("/account/api-keys", data={"name": "CI"}).text
+    import re
+    key = re.search(r"ih_[A-Za-z0-9_\-]+", page).group(0)
+    assert "shown only once" in page and key not in c.get("/account").text  # the plain key is never shown again
+    anon = TestClient(app)
+    r = anon.post("/api/scans", json={"url": f"{docs_site}/docs"}, headers={"Authorization": "Bearer ih_wrong"})
+    assert r.status_code == 201  # a wrong key is ignored, not an error: it just gets anonymous limits
+    other = anon.post("/api/scans", json={"url": f"{docs_site}/docs/other", "fresh": True}, headers={"Authorization": f"Bearer {key}"})
+    assert other.status_code == 201
+    from app.db import ScanMeta
+    with session_scope() as s:
+        assert s.get(ScanMeta, other.json()["id"]).user_id is not None and s.get(ScanMeta, r.json()["id"]) is None
+    assert "Delete" in c.get("/account").text and "never used" not in c.get("/account").text
+    assert anon.get("/api-docs").status_code == 200

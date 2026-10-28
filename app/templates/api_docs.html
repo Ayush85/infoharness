@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Docs health API: scan a docs site with one request · infoharness{% endblock %}
+{% block description %}Free API to scan a documentation site or help center and fetch the graded result as JSON: contradictions, duplicates, outdated pages and broken links. Works in CI.{% endblock %}
+{% block content %}
+<div class="wrap page"><article class="prose article">
+  <h1>API</h1>
+  <p class="lede">Start a scan, poll until it is done, read the grade and every finding as JSON. Free, with or without a key.</p>
+  <div class="takeaways"><h2>Limits</h2><ul>
+    <li>No key: {{ ip_limit }} scans per day per IP address, up to {{ max_pages }} pages per scan.</li>
+    <li>With an <a href="/account#api-keys">API key</a> (free, needs an account): {{ user_limit }} scans per day, up to {{ key_pages }} pages per scan.</li>
+    <li>Results for the same address are reused for 24 hours; add <code>"fresh": true</code> to scan again.</li></ul></div>
+
+  <h2>1. Start a scan</h2>
+  <pre><code>curl -X POST https://infoharness.com/api/scans \
+  -H "Authorization: Bearer ih_your_key" \
+  -H "Content-Type: application/json" \
+  -d '{"url": "https://docs.example.com"}'</code></pre>
+  <p>Returns <code>{"id": "…", "cached": false, "report_url": "/r/…"}</code>. The <code>Authorization</code> header is optional.</p>
+
+  <h2>2. Poll until it is done</h2>
+  <pre><code>curl https://infoharness.com/api/scans/ID</code></pre>
+  <p><code>status</code> is <code>queued</code>, <code>running</code>, <code>done</code> or <code>failed</code>. While it runs, <code>progress</code> (0 to 100), <code>pages_crawled</code> and a <code>live</code> object show where it is. Poll every 2 to 5 seconds.</p>
+
+  <h2>3. Read the result</h2>
+  <p>When <code>status</code> is <code>done</code> the response includes <code>grade</code> (A to F), <code>score</code> (0 to 100), <code>summary</code> and <code>issues</code>: a list of findings, each with <code>type</code>, <code>severity</code>, <code>title</code>, <code>page_a</code>, <code>page_b</code>, quotes and extra details.</p>
+  <pre><code>{"status": "done", "grade": "B", "score": 86.0,
+ "summary": {"total_issues": 14, "by_type": {"stale": 9, "broken_link": 5}},
+ "issues": [{"type": "broken_link", "severity": "medium", "title": "Broken internal link (HTTP 404)", ...}]}</code></pre>
+
+  <h2>Other endpoints</h2>
+  <ul>
+    <li><code>GET /r/ID/export.csv</code>: findings as CSV.</li>
+    <li><code>GET /badge/ID.svg</code>: a docs health badge for your README.</li>
+    <li><code>GET /r/ID</code>: the human-readable report.</li>
+  </ul>
+
+  <h2>Errors</h2>
+  <ul><li><code>400</code> the address is not allowed (not http or https, or a private network).</li>
+    <li><code>429</code> daily limit reached.</li><li><code>503</code> the queue is full; retry in a few minutes.</li></ul>
+
+  <h2>Use it in CI</h2>
+  <p>The <a href="https://github.com/Ayush85/infoharness/tree/main/.github/actions/docs-health">docs-health GitHub Action</a> wraps these calls and fails a workflow when the grade drops below the one you set.</p>
+</article></div>
+{% endblock %}

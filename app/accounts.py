@@ -17,7 +17,7 @@ from app import config
 from app.auth import (COOKIE, SESSION_DAYS, clean_email, client_hash, current_user, issue_token, make_session,
                       read_session, redeem_token, site_limit)
 from app.crawler import normalize
-from app.db import IgnoredIssue, Issue, Scan, ScanMeta, Site, SiteScan, SiteSetting, User, Waitlist, session_scope, utcnow
+from app.db import ApiKey, IgnoredIssue, Issue, Scan, ScanMeta, Site, SiteScan, SiteSetting, User, Waitlist, session_scope, utcnow
 from app.mailer import send_email
 from app.security import UnsafeURL, check_url_safe, normalize_input_url
 from app.templating import templates
@@ -97,6 +97,10 @@ def account(request: Request, msg: str = "", err: str = ""):
     me = current_user(request)
     if not me:
         return _redirect("/login")
+    return _account_page(request, me, msg, err)
+
+
+def _account_page(request: Request, me: dict, msg: str = "", err: str = "", new_key: str = ""):
     limit = site_limit(me["plan"])
     with session_scope() as s:
         sites = list(s.scalars(select(Site).where(Site.user_id == me["id"]).order_by(Site.id)))
@@ -108,6 +112,7 @@ def account(request: Request, msg: str = "", err: str = ""):
             last_two[site.id] = [(r.summary or {}).get("total_issues", 0) for r in rows[:2]]
             st = s.get(SiteSetting, site.id)
             hooks[site.id] = bool(st and st.webhook_url)
+        keys = list(s.scalars(select(ApiKey).where(ApiKey.user_id == me["id"]).order_by(ApiKey.id)))
         graded = [x for x in sites if x.last_status == "done" and x.last_score is not None]
         dash = {
             "sites": len(sites), "avg": round(sum(x.last_score for x in graded) / len(graded)) if graded else None,
@@ -118,10 +123,37 @@ def account(request: Request, msg: str = "", err: str = ""):
                 Scan.id.in_(select(SiteScan.scan_id).where(SiteScan.site_id.in_([x.id for x in sites] or [0]))),
                 Scan.id.in_(select(ScanMeta.scan_id).where(ScanMeta.user_id == me["id"]))))),
         }
-    return _page(request, "account.html", {"trend": trend, "hooks": hooks, "last_two": last_two, "dash": dash, "sites": sites,
+    return _page(request, "account.html", {"keys": keys, "new_key": new_key, "trend": trend, "hooks": hooks, "last_two": last_two, "dash": dash, "sites": sites,
                                            "limit": limit, "intervals": INTERVALS,
                                            "allowed": [30] if me["plan"] != "pro" else [1, 7, 30],
                                            "msg": msg, "err": err, "now": utcnow()})
+
+
+@router.post("/account/api-keys", response_class=HTMLResponse)
+def create_api_key(request: Request, name: str = Form("")):
+    import secrets as _secrets
+    me = current_user(request)
+    if not me:
+        return _redirect("/login")
+    with session_scope() as s:
+        if s.scalar(select(func.count()).select_from(ApiKey).where(ApiKey.user_id == me["id"])) >= 5:
+            return _redirect(f"/account?err={quote('You can have up to 5 API keys. Delete one first.')}")
+        key = "ih_" + _secrets.token_urlsafe(30)
+        s.add(ApiKey(user_id=me["id"], name=name.strip()[:80] or "API key", prefix=key[:9],
+                     key_hash=hashlib.sha256(key.encode()).hexdigest()))
+    return _account_page(request, me, msg="API key created. Copy it now: it is shown only once.", new_key=key)
+
+
+@router.post("/account/api-keys/{key_id}/delete")
+def delete_api_key(request: Request, key_id: int):
+    me = current_user(request)
+    if not me:
+        return _redirect("/login")
+    with session_scope() as s:
+        row = s.get(ApiKey, key_id)
+        if row and row.user_id == me["id"]:
+            s.delete(row)
+    return _redirect(f"/account?msg={quote('API key deleted.')}")
 
 
 @router.get("/account/history", response_class=HTMLResponse)

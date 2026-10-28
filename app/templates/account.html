@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% block title %}My sites · infoharness{% endblock %}
 {% block head %}<meta name="robots" content="noindex">{% endblock %}
+{% block scripts %}<script src="/static/report.js?v={{ version }}" defer></script>{% endblock %}
 {% block content %}
 <div class="wrap page">
   <h1>My sites</h1>
@@ -64,6 +65,18 @@
     </div>
   </form>
   {% else %}<p class="form-note">You're using all {{ limit }} watched site{{ 's' if limit != 1 }}.</p>{% endif %}
+
+  <section class="panel" id="api-keys" style="margin-top:28px">
+    <h2 style="font-size:1.15rem">API keys</h2>
+    <p class="form-note" style="margin-top:0">Scan from your own scripts or CI. Keys get your higher limits. See the <a href="/api-docs">API docs</a>.</p>
+    {% if new_key %}<p class="flash" role="status"><code class="full-url" id="new-key">{{ new_key }}</code>
+      <button type="button" class="secondary small" data-copy-text="{{ new_key }}">Copy key</button></p>{% endif %}
+    {% if keys %}<ul class="pages">{% for k in keys %}<li><form method="post" action="/account/api-keys/{{ k.id }}/delete" class="inline"><span class="k">{{ k.name }}</span><code>{{ k.prefix }}…</code>
+      <span class="ctx">{% if k.last_used_at %}last used {{ k.last_used_at.strftime('%d %b %Y') }}{% else %}never used{% endif %}</span>
+      <button class="secondary small danger" type="submit">Delete</button></form></li>{% endfor %}</ul>{% endif %}
+    <form method="post" action="/account/api-keys" class="field-row" style="margin-top:.6rem">
+      <input name="name" type="text" placeholder="Key name, for example CI" aria-label="Key name" maxlength="80"><button class="secondary" type="submit">Create API key</button></form>
+  </section>
 
   <form method="post" action="/logout" style="margin-top:36px"><button class="secondary" type="submit">Sign out</button></form>
 </div>
