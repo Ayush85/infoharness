@@ -48,6 +48,14 @@ def verdict(scan, issues) -> str:
             "Fix those first.")
 
 
+def verdict_sub(issues) -> str:
+    total = len(issues)
+    important = sum(1 for i in issues if i.severity in ("high", "medium"))
+    if not total or important == total:
+        return ""
+    return f"{total} findings in all: {important} serious, {total - important} minor. Most serious first."
+
+
 def issue_md(i, root: str = "") -> str:
     out = [f"- [ ] **{i.title}** ({i.severity})"]
     if i.type in ("broken_link", "admin_link"):

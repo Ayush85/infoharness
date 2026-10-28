@@ -16,6 +16,7 @@
   --line: #dadfe7;
   --line-strong: #b9c1cf;
   --marker: #ffe45c;
+  --note-bg: #fff6cf; --note-line: #e6c84a;
   --pen: #d23b3b;
   --pen-bg: #fdeceb;
   --amber: #a3600a;
@@ -37,7 +38,7 @@
 @media (prefers-color-scheme: dark) {
   :root {
     --paper: #0d1522; --sheet: #142033; --ink: #e8edf5; --ink-soft: #c3cddd; --muted: #96a3b8;
-    --line: #25344b; --line-strong: #3a4c69; --marker: #7a6a14; --pen: #ff7b78; --pen-bg: #3a1f26;
+    --line: #25344b; --line-strong: #3a4c69; --marker: #7a6a14; --note-bg: #2b2712; --note-line: #7a6a14; --pen: #ff7b78; --pen-bg: #3a1f26;
     --amber: #efb35f; --amber-bg: #3a2c16; --calm: #9db4cb; --calm-bg: #1c2b3f; --ok: #6fd3a2; --ok-bg: #153a2c;
     --on-ink: #0d1522; --focus: #8fa6ff;
   }
@@ -397,3 +398,16 @@ form.inline{display:inline}.issue-foot{display:flex;gap:.5rem;flex-wrap:wrap}
 .live-feed{list-style:none;padding:0;margin:0 0 1rem;font-family:ui-monospace,monospace;font-size:.78rem;color:var(--muted,#5b6675)}
 .live-feed li{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.live-feed li:first-child{color:var(--ink,#0e1a2b)}
 @media (prefers-reduced-motion:no-preference){.live-feed li{animation:feedin .25s ease-out}@keyframes feedin{from{opacity:0;transform:translateY(-3px)}}}
+
+.notice.coverage{background:var(--note-bg);color:var(--ink);border:1px solid var(--note-line);border-left-width:4px;border-radius:var(--r-s,6px);padding:.7rem .9rem;margin:.8rem 0;font-size:.93rem;max-width:44rem}
+.notice.coverage strong{font-weight:700}.notice.coverage ul{margin:.3rem 0 0;padding-left:1.1rem}
+.notice.diff{background:var(--sheet);color:var(--ink);border:1px solid var(--line);border-left:4px solid var(--pen,#d23b3b);border-radius:var(--r-s,6px);max-width:44rem}
+.notice.diff .sub{display:block;color:var(--muted);font-size:.88rem;margin-top:.2rem}
+details.more-issues{margin-top:.8rem}details.more-issues>summary{cursor:pointer;font-weight:600;padding:.6rem .9rem;border:1px dashed var(--line-strong);border-radius:var(--r-s,6px);list-style:none}
+details.more-issues>summary::-webkit-details-marker{display:none}details.more-issues[open]>summary{margin-bottom:.8rem}
+.verdict-sub{color:var(--muted);font-size:.92rem;margin-top:.3rem}
+/* Low-severity items without quotes (e.g. "not modified in 3 years") are compact rows so long lists stay scannable */
+.issue.sev-low:not(:has(blockquote)){padding-top:.7rem;padding-bottom:.7rem}
+.issue.sev-low:not(:has(blockquote)) .issue-detail{margin:.2rem 0;font-size:.9rem;color:var(--muted)}
+.issue.sev-low:not(:has(blockquote)) .pages{margin:.3rem 0}
+.issue.sev-low:not(:has(blockquote)) .issue-foot{margin-top:.4rem}

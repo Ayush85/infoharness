@@ -21,7 +21,7 @@ from app.crawler import normalize
 from app.db import IgnoredIssue, Issue, Scan, ScanMeta, Site, SiteScan, init_engine, session_scope, utcnow
 from app.auth import client_hash, current_user
 from app.scoring import TYPE_LABELS
-from app.templating import report_md, templates, verdict
+from app.templating import report_md, templates, verdict, verdict_sub
 from app import accounts, seo
 from app.security import UnsafeURL, check_url_safe, normalize_input_url
 
@@ -109,7 +109,7 @@ def report(request: Request, scan_id: str):
                 old = {fingerprint(x) for x in s.scalars(select(Issue).where(Issue.scan_id == prev.id))}
                 cur = {i.id: fingerprint(i) for i in issues}
                 new_ids = {k for k, v in cur.items() if v not in old}
-                diff = {"prev_id": prev.id, "prev_when": prev.finished_at or prev.created_at, "prev_grade": prev.grade,
+                diff = {"prev_id": prev.id, "prev_when": prev.finished_at or prev.created_at, "prev_grade": prev.grade, "prev_pages": prev.pages_crawled or 0,
                         "new_ids": new_ids, "new": len(new_ids), "fixed": len(old - set(cur.values()))}
         owner_site, ignored_ids = None, set()
         me = current_user(request)
@@ -127,7 +127,7 @@ def report(request: Request, scan_id: str):
             latest_id = s.scalar(select(Scan.id).where(Scan.url == scan.url, Scan.status == "done",
                                                        ~Scan.client_hash.like("site:%")).order_by(Scan.created_at.desc()).limit(1)) or scan.id
         ctx = {"owner_site": owner_site, "ignored_ids": ignored_ids, "diff": diff, "indexable": indexable, "latest_id": latest_id, "history": history, "scan": scan, "grouped": [(t, grouped[t]) for t in TYPE_LABELS if t in grouped],
-               "verdict": verdict(scan, issues), "total": len(issues), "report_md": report_md(scan, [(t, grouped[t]) for t in TYPE_LABELS if t in grouped]) if issues else "",
+               "verdict": verdict(scan, issues), "verdict_sub": verdict_sub(issues), "total": len(issues), "report_md": report_md(scan, [(t, grouped[t]) for t in TYPE_LABELS if t in grouped]) if issues else "",
                "share_url": f"{config.settings.public_base_url}/r/{scan.id}",
                "badge_url": f"{config.settings.public_base_url}/badge/{scan.id}.svg"}
         return templates.TemplateResponse(request, "report.html", ctx)
