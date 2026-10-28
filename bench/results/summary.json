@@ -1,0 +1,549 @@
+[
+ {
+  "url": "https://docs.python-requests.org/en/latest/",
+  "status": "done",
+  "error": null,
+  "pages": 24,
+  "grade": "B",
+  "score": 87.5,
+  "secs": 43,
+  "issues": {
+   "stale": 1,
+   "broken_link": 3,
+   "thin_page": 1
+  }
+ },
+ {
+  "url": "https://flask.palletsprojects.com/en/stable/",
+  "status": "done",
+  "error": null,
+  "pages": 76,
+  "grade": "A",
+  "score": 90.5,
+  "secs": 166,
+  "issues": {
+   "admin_link": 5,
+   "duplicate_section": 2,
+   "broken_link": 4,
+   "thin_page": 1
+  }
+ },
+ {
+  "url": "https://docs.djangoproject.com/en/stable/",
+  "status": "done",
+  "error": null,
+  "pages": 21,
+  "grade": "A",
+  "score": 96.3,
+  "secs": 72,
+  "issues": {
+   "admin_link": 1
+  }
+ },
+ {
+  "url": "https://fastapi.tiangolo.com/",
+  "status": "done",
+  "error": null,
+  "pages": 150,
+  "grade": "B",
+  "score": 85.0,
+  "secs": 95,
+  "issues": {
+   "broken_link": 5,
+   "admin_link": 18,
+   "duplicate_section": 6,
+   "stale": 1
+  }
+ },
+ {
+  "url": "https://docs.sqlalchemy.org/en/20/",
+  "status": "done",
+  "error": null,
+  "pages": 150,
+  "grade": "D",
+  "score": 58.2,
+  "secs": 99,
+  "issues": {
+   "broken_link": 2,
+   "stale": 84,
+   "duplicate_section": 14
+  }
+ },
+ {
+  "url": "https://numpy.org/doc/stable/",
+  "status": "done",
+  "error": null,
+  "pages": 150,
+  "grade": "B",
+  "score": 82.5,
+  "secs": 43,
+  "issues": {
+   "duplicate_page": 1,
+   "broken_link": 3,
+   "duplicate_section": 17,
+   "stale": 10
+  }
+ },
+ {
+  "url": "https://pandas.pydata.org/docs/",
+  "status": "done",
+  "error": null,
+  "pages": 150,
+  "grade": "B",
+  "score": 87.8,
+  "secs": 44,
+  "issues": {
+   "broken_link": 1,
+   "admin_link": 1,
+   "duplicate_section": 17,
+   "stale": 4,
+   "thin_page": 1
+  }
+ },
+ {
+  "url": "https://scikit-learn.org/stable/",
+  "status": "done",
+  "error": null,
+  "pages": 150,
+  "grade": "D",
+  "score": 53.0,
+  "secs": 56,
+  "issues": {
+   "contradiction": 25,
+   "broken_link": 2,
+   "duplicate_section": 40
+  }
+ },
+ {
+  "url": "https://docs.pytest.org/en/stable/",
+  "status": "done",
+  "error": null,
+  "pages": 146,
+  "grade": "B",
+  "score": 87.7,
+  "secs": 105,
+  "issues": {
+   "contradiction": 1,
+   "broken_link": 14,
+   "duplicate_section": 1,
+   "stale": 9
+  }
+ },
+ {
+  "url": "https://click.palletsprojects.com/en/stable/",
+  "status": "done",
+  "error": null,
+  "pages": 38,
+  "grade": "B",
+  "score": 86.3,
+  "secs": 83,
+  "issues": {
+   "stale": 6,
+   "broken_link": 1,
+   "thin_page": 1
+  }
+ },
+ {
+  "url": "https://jinja.palletsprojects.com/en/stable/",
+  "status": "done",
+  "error": null,
+  "pages": 15,
+  "grade": "A",
+  "score": 97.4,
+  "secs": 55,
+  "issues": {
+   "broken_link": 1
+  }
+ },
+ {
+  "url": "https://www.python-httpx.org/",
+  "status": "done",
+  "error": null,
+  "pages": 23,
+  "grade": "A",
+  "score": 94.6,
+  "secs": 21,
+  "issues": {
+   "broken_link": 4
+  }
+ },
+ {
+  "url": "https://docs.docker.com/get-started/",
+  "status": "done",
+  "error": null,
+  "pages": 22,
+  "grade": "B",
+  "score": 85.5,
+  "secs": 51,
+  "issues": {
+   "admin_link": 3,
+   "broken_link": 3
+  }
+ },
+ {
+  "url": "https://kubernetes.io/docs/concepts/",
+  "status": "done",
+  "error": null,
+  "pages": 150,
+  "grade": "D",
+  "score": 63.7,
+  "secs": 153,
+  "issues": {
+   "contradiction": 1,
+   "broken_link": 4,
+   "stale": 68,
+   "duplicate_section": 7
+  }
+ },
+ {
+  "url": "https://www.postgresql.org/docs/current/",
+  "status": "done",
+  "error": null,
+  "pages": 150,
+  "grade": "A",
+  "score": 97.9,
+  "secs": 144,
+  "issues": {
+   "contradiction": 1,
+   "duplicate_section": 1
+  }
+ },
+ {
+  "url": "https://redis.io/docs/latest/",
+  "status": "done",
+  "error": null,
+  "pages": 150,
+  "grade": "D",
+  "score": 64.2,
+  "secs": 98,
+  "issues": {
+   "duplicate_page": 1,
+   "broken_link": 3,
+   "admin_link": 7,
+   "duplicate_section": 13,
+   "stale": 48
+  }
+ },
+ {
+  "url": "https://www.nginx.com/resources/wiki/",
+  "status": "done",
+  "error": null,
+  "pages": 27,
+  "grade": "C",
+  "score": 78.9,
+  "secs": 27,
+  "issues": {
+   "broken_link": 3,
+   "admin_link": 1,
+   "duplicate_section": 1
+  }
+ },
+ {
+  "url": "https://docs.github.com/en/get-started",
+  "status": "done",
+  "error": null,
+  "pages": 143,
+  "grade": "D",
+  "score": 64.1,
+  "secs": 68,
+  "issues": {
+   "duplicate_page": 8,
+   "stale": 2,
+   "admin_link": 1,
+   "duplicate_section": 2,
+   "broken_link": 1
+  }
+ },
+ {
+  "url": "https://docs.gitlab.com/ee/user/",
+  "status": "done",
+  "error": null,
+  "pages": 150,
+  "grade": "B",
+  "score": 89.9,
+  "secs": 148,
+  "issues": {
+   "broken_link": 1,
+   "duplicate_section": 4,
+   "stale": 14
+  }
+ },
+ {
+  "url": "https://react.dev/learn",
+  "status": "done",
+  "error": null,
+  "pages": 51,
+  "grade": "A",
+  "score": 96.2,
+  "secs": 29,
+  "issues": {
+   "broken_link": 5
+  }
+ },
+ {
+  "url": "https://vuejs.org/guide/",
+  "status": "done",
+  "error": null,
+  "pages": 105,
+  "grade": "B",
+  "score": 82.0,
+  "secs": 36,
+  "issues": {
+   "orphan_page": 52
+  }
+ },
+ {
+  "url": "https://svelte.dev/docs/svelte",
+  "status": "done",
+  "error": null,
+  "pages": 150,
+  "grade": "B",
+  "score": 83.4,
+  "secs": 61,
+  "issues": {
+   "duplicate_page": 4,
+   "broken_link": 6,
+   "duplicate_section": 2,
+   "stale": 1,
+   "thin_page": 23
+  }
+ },
+ {
+  "url": "https://nextjs.org/docs",
+  "status": "done",
+  "error": null,
+  "pages": 150,
+  "grade": "A",
+  "score": 97.9,
+  "secs": 65,
+  "issues": {
+   "broken_link": 1,
+   "admin_link": 2
+  }
+ },
+ {
+  "url": "https://expressjs.com/en/guide/",
+  "status": "done",
+  "error": null,
+  "pages": 12,
+  "grade": "C",
+  "score": 76.6,
+  "secs": 18,
+  "issues": {
+   "admin_link": 1,
+   "broken_link": 1,
+   "thin_page": 1,
+   "orphan_page": 4
+  }
+ },
+ {
+  "url": "https://nodejs.org/en/learn",
+  "status": "done",
+  "error": null,
+  "pages": 96,
+  "grade": "D",
+  "score": 61.5,
+  "secs": 80,
+  "issues": {
+   "duplicate_page": 7,
+   "broken_link": 6,
+   "stale": 28,
+   "orphan_page": 7
+  }
+ },
+ {
+  "url": "https://docs.stripe.com/payments",
+  "status": "done",
+  "error": null,
+  "pages": 150,
+  "grade": "A",
+  "score": 91.6,
+  "secs": 113,
+  "issues": {
+   "broken_link": 6,
+   "admin_link": 4,
+   "thin_page": 1
+  }
+ },
+ {
+  "url": "https://developers.cloudflare.com/workers/",
+  "status": "done",
+  "error": null,
+  "pages": 150,
+  "grade": "C",
+  "score": 76.2,
+  "secs": 103,
+  "issues": {
+   "broken_link": 6,
+   "stale": 4,
+   "admin_link": 1,
+   "duplicate_section": 33
+  }
+ },
+ {
+  "url": "https://docs.aws.amazon.com/lambda/latest/dg/",
+  "status": "done",
+  "error": null,
+  "pages": 150,
+  "grade": "D",
+  "score": 59.6,
+  "secs": 75,
+  "issues": {
+   "duplicate_page": 1,
+   "duplicate_section": 40,
+   "stale": 49,
+   "broken_link": 9,
+   "thin_page": 1
+  }
+ },
+ {
+  "url": "https://learn.microsoft.com/en-us/azure/app-service/",
+  "status": "done",
+  "error": null,
+  "pages": 147,
+  "grade": "F",
+  "score": 27.2,
+  "secs": 50,
+  "issues": {
+   "duplicate_page": 16,
+   "contradiction": 25,
+   "stale": 15,
+   "duplicate_section": 40
+  }
+ },
+ {
+  "url": "https://cloud.google.com/run/docs",
+  "status": "failed",
+  "error": "We couldn't read any pages. The site may block bots or render its docs with JavaScript only.",
+  "pages": 0,
+  "grade": null,
+  "score": null,
+  "secs": 157,
+  "issues": {}
+ },
+ {
+  "url": "https://docs.anthropic.com/en/docs/welcome",
+  "status": "failed",
+  "error": "We could only read one page at this address, so there is nothing to compare. Try the main docs or help-center URL (for example https://example.com/docs/).",
+  "pages": 1,
+  "grade": null,
+  "score": null,
+  "secs": 2,
+  "issues": {}
+ },
+ {
+  "url": "https://platform.openai.com/docs/overview",
+  "status": "failed",
+  "error": "We couldn't read any pages. The site may block bots or render its docs with JavaScript only.",
+  "pages": 1,
+  "grade": null,
+  "score": null,
+  "secs": 1,
+  "issues": {}
+ },
+ {
+  "url": "https://developer.hashicorp.com/terraform/docs",
+  "status": "done",
+  "error": null,
+  "pages": 4,
+  "grade": "A",
+  "score": 92.3,
+  "secs": 21,
+  "issues": {
+   "broken_link": 1
+  }
+ },
+ {
+  "url": "https://prometheus.io/docs/introduction/overview/",
+  "status": "failed",
+  "error": "We could only read one page at this address, so there is nothing to compare. Try the main docs or help-center URL (for example https://example.com/docs/).",
+  "pages": 1,
+  "grade": null,
+  "score": null,
+  "secs": 1,
+  "issues": {}
+ },
+ {
+  "url": "https://grafana.com/docs/grafana/latest/",
+  "status": "done",
+  "error": null,
+  "pages": 150,
+  "grade": "C",
+  "score": 77.8,
+  "secs": 67,
+  "issues": {
+   "broken_link": 1,
+   "duplicate_section": 14,
+   "stale": 31
+  }
+ },
+ {
+  "url": "https://www.sqlite.org/docs.html",
+  "status": "done",
+  "error": null,
+  "pages": 150,
+  "grade": "C",
+  "score": 77.8,
+  "secs": 67,
+  "issues": {
+   "duplicate_page": 3,
+   "contradiction": 3,
+   "broken_link": 2,
+   "stale": 18,
+   "duplicate_section": 1,
+   "thin_page": 2
+  }
+ },
+ {
+  "url": "https://dev.mysql.com/doc/refman/8.0/en/",
+  "status": "done",
+  "error": null,
+  "pages": 150,
+  "grade": "A",
+  "score": 100.0,
+  "secs": 80,
+  "issues": {}
+ },
+ {
+  "url": "https://doc.rust-lang.org/book/",
+  "status": "done",
+  "error": null,
+  "pages": 113,
+  "grade": "C",
+  "score": 71.4,
+  "secs": 21,
+  "issues": {
+   "duplicate_page": 1,
+   "duplicate_section": 40,
+   "broken_link": 8,
+   "thin_page": 1
+  }
+ },
+ {
+  "url": "https://go.dev/doc/",
+  "status": "done",
+  "error": null,
+  "pages": 147,
+  "grade": "F",
+  "score": 36.1,
+  "secs": 92,
+  "issues": {
+   "duplicate_page": 10,
+   "contradiction": 25,
+   "broken_link": 15,
+   "admin_link": 3,
+   "duplicate_section": 8,
+   "stale": 41
+  }
+ },
+ {
+  "url": "https://support.mailchimp.com/hc/en-us",
+  "status": "failed",
+  "error": "We couldn't connect to this site. Check the URL and try again.",
+  "pages": 1,
+  "grade": null,
+  "score": null,
+  "secs": 0,
+  "issues": {}
+ }
+]
