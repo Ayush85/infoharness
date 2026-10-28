@@ -91,10 +91,14 @@ jobs:
           CHECKOUT_URL: ${{ vars.CHECKOUT_URL }}
           PRO_PRICE: ${{ vars.PRO_PRICE }}
           LLM_PROVIDER: ${{ vars.LLM_PROVIDER }}
+          CONTACT_EMAIL: ${{ vars.CONTACT_EMAIL }}
+          WITH_BROWSER: ${{ vars.WITH_BROWSER }}
+          RENDER_JS: ${{ vars.RENDER_JS }}
+          WORKER_MEM: ${{ vars.WORKER_MEM }}
         run: |
           # Only non-empty values are written, into the server's .env (never printed). Empty = leave as is.
           lines=""
-          for k in RESEND_API_KEY SECRET_KEY LS_WEBHOOK_SECRET ANTHROPIC_API_KEY MAIL_FROM ADMIN_EMAILS CHECKOUT_URL PRO_PRICE LLM_PROVIDER; do
+          for k in RESEND_API_KEY SECRET_KEY LS_WEBHOOK_SECRET ANTHROPIC_API_KEY MAIL_FROM ADMIN_EMAILS CHECKOUT_URL PRO_PRICE LLM_PROVIDER CONTACT_EMAIL WITH_BROWSER RENDER_JS WORKER_MEM; do
             v="${!k}"; [ -n "$v" ] && lines+="$k=$v"$'\n'
           done
           [ -n "$lines" ] || { echo "No extra settings configured."; exit 0; }

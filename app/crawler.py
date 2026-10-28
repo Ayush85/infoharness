@@ -12,6 +12,7 @@ from urllib.robotparser import RobotFileParser
 import httpx
 
 from app import config
+from app import render
 from app.extract import Extracted, extract
 from app.security import UnsafeURL, check_url_safe
 
@@ -60,6 +61,7 @@ class CrawledPage:
     extracted: Extracted | None = None
     from_sitemap: bool = False
     error: str | None = None
+    rendered: bool = False
 
 
 @dataclass
@@ -92,6 +94,7 @@ class Crawler:
         self.robots: RobotFileParser | None = None
         self.result = CrawlResult(start_url=self.start_url, root=self.root)
         self._queued: set[str] = set()
+        self._renderer: render.Renderer | None = render.Renderer(config.settings.user_agent) if render.available() else None
         self._sem = asyncio.Semaphore(s.crawl_concurrency)
 
     def _set_scope(self, url: str) -> None:
@@ -249,6 +252,8 @@ class Crawler:
                 self.result.stopped_reason = f"page limit ({self.max_pages}) reached"
             return self.result
         finally:
+            if self._renderer:
+                await self._renderer.close()
             if own_client:
                 await self._client.aclose()
 
@@ -278,6 +283,13 @@ class Crawler:
                 if res.text and res.status < 400 and ("html" in res.content_type or "xml" not in res.content_type):
                     try:
                         page.extracted = extract(res.text, res.final_url, res.last_modified)
+                        if self._renderer and render.needs_render(res.text, page.extracted.word_count):
+                            out = await self._renderer.render(res.final_url)
+                            if out:
+                                rendered = extract(out[0], out[1], res.last_modified)
+                                if rendered.word_count > page.extracted.word_count:
+                                    page.extracted = rendered
+                                    page.rendered = True
                     except Exception as e:  # malformed HTML should never kill a scan
                         log.warning("extract failed for %s: %s", url, e)
                         page.error = "parse error"

@@ -24,11 +24,12 @@
       {% if not scan.summary.llm_verified %}Contradictions come from pattern matching, so give each a quick look before you act on it.{% endif %}</p>
     {% if diff %}<p class="notice coverage-note diff">Since the <a href="/r/{{ diff.prev_id }}">previous scan</a> ({{ diff.prev_when.strftime('%d %b %Y') }}, grade {{ diff.prev_grade }}): <strong>{{ diff.new }} new</strong> and <strong>{{ diff.fixed }} fixed</strong>.
       {% if diff.prev_pages and (scan.pages_crawled - diff.prev_pages)|abs > diff.prev_pages * 0.25 %}<span class="sub">The previous scan read {{ diff.prev_pages }} pages and this one read {{ scan.pages_crawled }}, so many "new" problems are on pages we had not reached before.</span>{% endif %}</p>{% endif %}
-    {% if scan.summary.partial or scan.summary.links_skipped %}
+    {% if scan.summary.partial or scan.summary.links_skipped or scan.summary.rendered_pages %}
     <div class="notice coverage" role="note"><strong>What this scan covered</strong>
       <ul>
         {% if scan.summary.partial %}<li>{{ scan.pages_crawled }} of {{ scan.summary.pages_found or scan.pages_crawled }} pages found were read, so this is a sample, not the whole site. Orphan pages are skipped because we can't tell what the unread pages link to.
           {% if not me and settings().pro_max_pages > settings().max_pages %}<a href="/login">Sign in (free)</a> to scan up to {{ settings().pro_max_pages }} pages.{% endif %}</li>{% endif %}
+        {% if scan.summary.rendered_pages %}<li>{{ scan.summary.rendered_pages }} pages draw their text with JavaScript, so we opened them in a browser to read them.</li>{% endif %}
         {% if scan.summary.links_skipped %}<li>{{ scan.summary.links_skipped }} links were not checked: large sites such as Google, Facebook or LinkedIn block automated checks, or the link limit was reached.</li>{% endif %}
       </ul></div>
     {% endif %}

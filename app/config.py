@@ -80,6 +80,9 @@ class Settings:
     smtp_password: str = field(default_factory=lambda: os.getenv("SMTP_PASSWORD", ""))
     admin_emails: str = field(default_factory=lambda: os.getenv("ADMIN_EMAILS", ""))  # comma separated; always Pro
     paid_plans: bool = field(default_factory=lambda: os.getenv("PAID_PLANS", "false").lower() in ("1", "true", "yes"))
+    render_js: bool = field(default_factory=lambda: os.getenv("RENDER_JS", "false").lower() in ("1", "true", "yes"))
+    render_max_pages: int = field(default_factory=lambda: _int("RENDER_MAX_PAGES", 150))
+    render_timeout_s: int = field(default_factory=lambda: _int("RENDER_TIMEOUT_S", 15))
     free_sites: int = field(default_factory=lambda: _int("FREE_SITES", 1))
     pro_sites: int = field(default_factory=lambda: _int("PRO_SITES", 10))
     checkout_url: str = field(default_factory=lambda: os.getenv("CHECKOUT_URL", ""))  # hosted checkout (Lemon Squeezy / Paddle)

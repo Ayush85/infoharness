@@ -1,0 +1,2 @@
+# Optional: headless Chromium for JavaScript-only docs (installed when WITH_BROWSER=1)
+playwright==1.63.0

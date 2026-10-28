@@ -73,6 +73,7 @@ def run_scan(scan_id: str) -> None:
             "duration_s": round(time.monotonic() - started, 1),
             "pages_total": len(crawl.pages),
             "pages_found": len(crawl.pages) + len(crawl.overflow),
+            "rendered_pages": sum(1 for p in crawl.pages.values() if p.rendered),
             "partial": _is_partial(crawl),
             "links_checked": getattr(crawl, "links_checked", 0),
             "links_skipped": getattr(crawl, "links_skipped", 0),

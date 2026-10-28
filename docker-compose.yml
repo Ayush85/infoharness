@@ -27,7 +27,10 @@ services:
     mem_limit: 384m
 
   app:
-    build: .
+    build:
+      context: .
+      args:
+        WITH_BROWSER: ${WITH_BROWSER:-0}   # 1 = install Chromium so JavaScript-only docs can be read (set RENDER_JS=true too)
     image: infoharness:latest
     restart: unless-stopped
     <<: *app-env
@@ -52,7 +55,7 @@ services:
         condition: service_started
     healthcheck:
       disable: true
-    mem_limit: 768m
+    mem_limit: ${WORKER_MEM:-768m}   # use 1536m when WITH_BROWSER=1
 
   caddy:
     image: caddy:2-alpine
