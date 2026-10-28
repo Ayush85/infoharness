@@ -81,7 +81,7 @@ def scan_json(scan: Scan, issues: list[Issue] | None = None) -> dict:
 @app.get("/", response_class=HTMLResponse)
 def index(request: Request):
     return templates.TemplateResponse(request, "index.html", {
-        "max_pages": config.settings.max_pages, "faqs": seo.FAQS, "guides": seo.GUIDES, "ld": seo.home_jsonld()})
+        "max_pages": config.settings.max_pages, "tools": seo.TOOLS, "faqs": seo.FAQS, "guides": seo.GUIDES, "ld": seo.home_jsonld()})
 
 
 @app.get("/r/{scan_id}", response_class=HTMLResponse)

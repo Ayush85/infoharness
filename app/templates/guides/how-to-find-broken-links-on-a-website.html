@@ -1,0 +1,31 @@
+{% extends "guides/_layout.html" %}
+{% block body %}
+<p class="lede">Finding broken links is easy. Knowing which ones matter, and fixing them in bulk, is the hard part.</p>
+<div class="takeaways"><h2>In short</h2><ul>
+  <li>Check the HTTP status of every link: 404 and 410 mean gone, 5xx and timeouts need a second look.</li>
+  <li>Big platforms often block automated checks, so a failure from them is not proof of a broken link.</li>
+  <li>Fix links in menus, headers and footers first. One edit repairs every page.</li></ul></div>
+
+<h2>Ways to find broken links</h2>
+<ul>
+  <li><strong>By hand.</strong> Click through important pages. Fine for ten pages, hopeless for hundreds.</li>
+  <li><strong>Search console reports.</strong> Google Search Console lists pages it could not find, but only those it tried to crawl.</li>
+  <li><strong>A crawler or link checker.</strong> It reads every page, collects the links, and requests each one. A <a href="/tools/broken-link-checker-for-documentation">broken link checker for documentation</a> also shows where each link sits.</li>
+</ul>
+<h2>Real breakage and false alarms</h2>
+<ul>
+  <li><strong>404 and 410:</strong> the page is gone. Almost always real.</li>
+  <li><strong>500 errors and timeouts:</strong> may be momentary. Check again before acting.</li>
+  <li><strong>403, 429, 999:</strong> usually the site refusing an automated request. Google, Facebook, LinkedIn and similar sites do this for working pages.</li>
+  <li><strong>Links to /wp-admin, edit pages, preview URLs, staging or localhost:</strong> not broken for you because you are signed in, but unreachable for every visitor.</li>
+</ul>
+<h2>Fix them in the right order</h2>
+<ol>
+  <li>Menu, header and footer links, which repeat on every page.</li>
+  <li>Links inside popular articles.</li>
+  <li>Links to pages you renamed or moved: add a redirect instead of editing every link.</li>
+  <li>External links that moved: update them or remove them.</li>
+</ol>
+<h2>Keep them fixed</h2>
+<p>Links break again every time a page moves. Rescan on a schedule and fix the new ones as they appear. <a href="/">Scan your site for broken links now</a>.</p>
+{% endblock %}

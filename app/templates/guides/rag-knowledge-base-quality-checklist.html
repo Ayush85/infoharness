@@ -1,0 +1,21 @@
+{% extends "guides/_layout.html" %}
+{% block body %}
+<p class="lede">A retrieval-augmented chatbot repeats what it retrieves. Eight checks on the source documents prevent most wrong answers before they happen.</p>
+<div class="takeaways"><h2>In short</h2><ul>
+  <li>Clean the sources before you tune the model, the chunking or the prompt.</li>
+  <li>Conflicts and stale pages cause the most visible wrong answers.</li>
+  <li>Rescan before every re-index.</li></ul></div>
+<h2>The checklist</h2>
+<ol>
+  <li><strong>No conflicting facts.</strong> The same price, limit or period must read the same on every page. <a href="/tools/rag-knowledge-base-checker">Scan for conflicts</a>.</li>
+  <li><strong>No near-duplicates.</strong> Copies fill the retrieved results with the same text and hide better sources.</li>
+  <li><strong>No stale pages.</strong> The retriever does not know a page is old. Update, label or remove it.</li>
+  <li><strong>No thin pages.</strong> A heading with one sentence adds noise and rarely helps an answer.</li>
+  <li><strong>Clear headings.</strong> Chunks inherit their meaning from headings. "Overview" tells a retriever nothing; "Refund window for annual plans" does.</li>
+  <li><strong>Working links.</strong> An assistant may quote a link. A 404 in the answer erodes trust quickly.</li>
+  <li><strong>Defined scope.</strong> Index only the pages meant to answer questions. Leave out changelogs, drafts and archived content.</li>
+  <li><strong>Named owners.</strong> Every page needs someone who updates it when the product changes.</li>
+</ol>
+<h2>Run it before each index build</h2>
+<p>Pages change daily; an index is a snapshot. Scan the public documentation before each rebuild and fix the conflicts first. See also <a href="/guides/fix-ai-chatbot-wrong-answers">why AI chatbots give wrong answers</a>.</p>
+{% endblock %}

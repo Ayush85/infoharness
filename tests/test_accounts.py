@@ -219,3 +219,23 @@ def test_dashboard_history_and_site_detail(env, monkeypatch, docs_site):
     login(other, out, email="stranger@example.com")
     assert other.get(f"/account/sites/{sid}", follow_redirects=False).headers["location"] == "/account"
     assert "Watched" not in other.get("/account/history").text
+
+
+def test_keyword_pages_and_sitemap(env):
+    import json, re
+    from app.seo import GUIDES, TOOLS
+    c = TestClient(app)
+    sitemap = c.get("/sitemap.xml").text
+    llms = c.get("/llms.txt").text
+    assert len(TOOLS) >= 9 and len(GUIDES) >= 8
+    for t in TOOLS:
+        r = c.get(f"/tools/{t['slug']}")
+        assert r.status_code == 200 and f"/tools/{t['slug']}" in sitemap and t["slug"] in llms
+        assert len(t["title"]) <= 66 and 70 <= len(t["description"]) <= 200, t["slug"]
+        assert "data-scan-form" in r.text and r.text.count("<h1") == 1
+        for block in re.findall(r'<script type="application/ld\+json">(.*?)</script>', r.text, re.S):
+            json.loads(block)
+    for g in GUIDES:
+        assert c.get(f"/guides/{g['slug']}").status_code == 200 and f"/guides/{g['slug']}" in sitemap
+    assert c.get("/tools").status_code == 200 and c.get("/tools/nope").status_code == 404
+    assert "/tools/documentation-checker" in c.get("/").text

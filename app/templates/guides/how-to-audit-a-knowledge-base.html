@@ -1,0 +1,23 @@
+{% extends "guides/_layout.html" %}
+{% block body %}
+<p class="lede">A knowledge base audit asks one question: can readers, and the AI assistants that read it for them, trust what is written here? Six steps answer it.</p>
+<div class="takeaways"><h2>In short</h2><ul>
+  <li>Inventory first, then check accuracy, duplicates, freshness, links and findability, in that order.</li>
+  <li>Fix problems that cause wrong answers before problems that only look untidy.</li>
+  <li>Automate the comparison. Reading every article against every other article does not scale.</li></ul></div>
+
+<h2>1. Make an inventory</h2>
+<p>List every article with its address, title, owner and last update. The sitemap gives you the addresses. If you cannot name an owner for an article, nobody is keeping it correct.</p>
+<h2>2. Check accuracy and contradictions</h2>
+<p>Pick the facts customers ask about most: prices, limits, refund periods, supported versions, deadlines. Search for each one and confirm every page states it the same way. Contradictions are the most damaging finding because readers cannot tell which page is right. A <a href="/tools/contradiction-checker">contradiction checker</a> does this comparison automatically.</p>
+<h2>3. Find duplicates</h2>
+<p>Look for articles with almost the same text and for paragraphs pasted into many articles. Merge the copies, redirect the old address, and keep one source of truth. See <a href="/guides/find-duplicate-and-outdated-pages">how to find duplicate and outdated pages</a>.</p>
+<h2>4. Check freshness</h2>
+<p>Flag articles that mention old years, old version numbers, or words such as deprecated and legacy, and articles not modified in years. For each one: update it, label it as legacy with a pointer to the current page, or remove it.</p>
+<h2>5. Check links</h2>
+<p>Find links that return 404, links to admin or draft pages, and links in the menu or footer that break on every page. Menu links are the cheapest fix because one change repairs hundreds of pages. See <a href="/guides/how-to-find-broken-links-on-a-website">how to find broken links</a>.</p>
+<h2>6. Check findability</h2>
+<p>Orphan articles, pages that no other page links to, are rarely maintained. Link them from the right place or retire them. Also check that thin pages, with a heading and a sentence, are filled in or removed.</p>
+<h2>Turn the audit into a routine</h2>
+<p>An audit is a snapshot. Rescan on a schedule and act on new problems only, so the knowledge base does not need another big audit. <a href="/tools/knowledge-base-audit">Run an automated knowledge base audit</a> to get the first snapshot in minutes.</p>
+{% endblock %}

@@ -1,0 +1,11 @@
+{% macro scan_form(id, button="Scan my docs") %}
+<form class="scan-form" data-scan-form novalidate>
+  <label for="url-{{ id }}" class="sr-only">Docs or help center URL</label>
+  <div class="field-row">
+    <input id="url-{{ id }}" name="url" type="text" inputmode="url" autocomplete="url" spellcheck="false" autocapitalize="off"
+           placeholder="help.yourcompany.com" required>
+    <button type="submit">{{ button }}</button>
+  </div>
+  <p class="form-note" data-note>Free. No signup. Reads up to {{ max_pages }} pages.</p>
+</form>
+{% endmacro %}

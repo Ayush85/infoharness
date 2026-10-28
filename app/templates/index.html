@@ -1,18 +1,8 @@
 {% extends "base.html" %}
-{% block title %}Docs contradiction checker for help centers · infoharness{% endblock %}
-{% block description %}Free scan of your help center or docs site. Finds contradicting pages, duplicates, outdated content and broken links, the problems that make AI assistants answer wrong.{% endblock %}
+{% block title %}Free Help Center & Docs Audit Tool: Broken Links, Duplicates · infoharness{% endblock %}
+{% block description %}Free documentation and knowledge base audit. Scan your help center or docs site for contradicting pages, duplicate content, outdated pages, broken links and orphan pages, and get an A to F grade.{% endblock %}
 {% block jsonld %}<script type="application/ld+json">{{ ld|tojson }}</script>{% endblock %}
-{% macro scan_form(id, button="Scan my docs") %}
-<form class="scan-form" data-scan-form novalidate>
-  <label for="url-{{ id }}" class="sr-only">Docs or help center URL</label>
-  <div class="field-row">
-    <input id="url-{{ id }}" name="url" type="text" inputmode="url" autocomplete="url" spellcheck="false" autocapitalize="off"
-           placeholder="help.yourcompany.com" required>
-    <button type="submit">{{ button }}</button>
-  </div>
-  <p class="form-note" data-note>Free. No signup. Reads up to {{ max_pages }} pages.</p>
-</form>
-{% endmacro %}
+{% from "_scan_form.html" import scan_form with context %}
 {% block content %}
 <section class="hero">
   <div class="wrap">
@@ -42,6 +32,16 @@
       </div>
       <p class="redline-foot">Same question, two answers. Your AI assistant quotes whichever page it finds first.</p>
     </figure>
+  </div>
+</section>
+
+<section class="section" id="tools">
+  <div class="wrap">
+    <div class="section-head"><h2>Free checkers for docs, help centers and knowledge bases</h2>
+      <p>Whatever you searched for, it is the same scan. Pick the one that matches your job.</p></div>
+    <ul class="chip-row">
+      {% for t in tools %}<li><a class="chip-link" href="/tools/{{ t.slug }}">{{ t.h1 }}</a></li>{% endfor %}
+    </ul>
   </div>
 </section>
 

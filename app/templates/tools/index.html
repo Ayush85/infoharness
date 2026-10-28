@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}Free docs and knowledge base checkers · infoharness{% endblock %}
+{% block description %}Free checkers for documentation and help centers: broken links, duplicate content, outdated pages, contradictions, orphan pages and knowledge base quality for AI assistants.{% endblock %}
+{% block content %}
+<div class="wrap page">
+  <h1>Free documentation and knowledge base checkers</h1>
+  <p class="lede">One scanner, framed for the job you came to do. Each reads your public docs and returns a graded report.</p>
+  <ul class="sites guide-list">
+    {% for t in tools %}<li class="panel"><h2 style="font-size:1.3rem"><a href="/tools/{{ t.slug }}">{{ t.h1 }}</a></h2><p style="margin:8px 0 0;color:var(--ink-soft)">{{ t.description }}</p></li>{% endfor %}
+  </ul>
+</div>
+{% endblock %}

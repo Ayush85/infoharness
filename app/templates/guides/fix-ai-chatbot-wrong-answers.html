@@ -1,0 +1,23 @@
+{% extends "guides/_layout.html" %}
+{% block body %}
+<p class="lede">When an AI support bot answers wrong, the model is rarely the cause. It repeated what the documentation said, or one of several things the documentation said.</p>
+<div class="takeaways"><h2>In short</h2><ul>
+  <li>Take a wrong answer, find the pages it came from, and read them side by side.</li>
+  <li>Four causes cover most cases: conflicting pages, stale pages, duplicates and missing pages.</li>
+  <li>Fix the source, then re-index. Prompt changes only hide the problem.</li></ul></div>
+<h2>Trace one wrong answer</h2>
+<ol>
+  <li>Copy the question and the wrong answer.</li>
+  <li>Search your help center for the key terms of the answer.</li>
+  <li>Open every page that mentions it and compare what each one says.</li>
+</ol>
+<h2>The four usual causes</h2>
+<ul>
+  <li><strong>Conflicting pages.</strong> The refund policy says 14 days and the FAQ says 30. The bot answers with whichever it retrieves. Details: <a href="/guides/contradictory-docs-ai-assistants">how contradictions become wrong answers</a>.</li>
+  <li><strong>Stale pages.</strong> An old guide describes a feature that changed. Nothing tells the bot it is old.</li>
+  <li><strong>Duplicates.</strong> Two copies of a page, one updated. The bot may quote the old one.</li>
+  <li><strong>Missing pages.</strong> No page answers the question, so the bot guesses.</li>
+</ul>
+<h2>Find them all, not one at a time</h2>
+<p>Tracing single answers finds single problems. A scan of the whole help center finds every conflict, duplicate and stale page at once, so you fix the causes of many wrong answers together. <a href="/tools/rag-knowledge-base-checker">Check the documents your bot reads</a>.</p>
+{% endblock %}

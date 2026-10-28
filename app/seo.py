@@ -30,6 +30,9 @@ FAQS = [
     ("Does it read private or logged-in pages?", "No. It only reads pages anyone can open without signing in. Documentation behind a login can't be scanned yet.", None),
     ("Will it work on my site?", "It works on any documentation site or help center that serves its text as HTML, which covers most platforms. Sites that only draw their content with JavaScript show up as unreadable.", None),
     ("How are contradictions found?", "By comparing the numbers, limits and dates that different pages state about the same thing. Each finding shows both quotes side by side so you can judge it in seconds.", ("Read the guide", "/guides/contradictory-docs-ai-assistants")),
+    ("How do I find broken links in my help center?", "Paste the help center address into the scanner. It requests every link, skips sites that block automated checks, and lists each broken link with the pages and menu items that contain it.", ("Broken link checker", "/tools/broken-link-checker-for-documentation")),
+    ("How do I find duplicate or outdated articles in a knowledge base?", "Scan it. Pages are compared with each other to find near-duplicates, and checked for old dates, old version numbers and long-unmodified pages.", ("Find duplicate and outdated pages", "/guides/find-duplicate-and-outdated-pages")),
+    ("Why does my AI chatbot give wrong answers?", "Usually because the documentation it reads has conflicting or stale pages. The model repeats the page it retrieves, so fix the sources first.", ("Read why and how to fix it", "/guides/fix-ai-chatbot-wrong-answers")),
     ("Who can see my report?", "Anyone who has the link. Reports of publicly scanned sites also appear in the public reports list and in search results, so teams can compare. Reports for sites monitored from an account stay private. To remove a report, email us from the site's domain.", None),
     ("What does it cost?", "Nothing. Scanning, watching your sites on a schedule and alerts by email, Slack or webhook are all free.", ("What is included", "/pricing")),
     ("Can I stop the crawler?", "Yes. Add InfoharnessBot to your robots.txt and it will skip your whole site.", ("How to block it", "/bot#block")),
@@ -51,9 +54,12 @@ def home_jsonld() -> dict:
     ]}
 
 
+from app.seo_pages import NEW_GUIDES, TOOL_BY_SLUG, TOOLS  # noqa: E402
+
+GUIDES += NEW_GUIDES
 BY_SLUG = {g["slug"]: g for g in GUIDES}
 PRIVATE = ("/api/", "/account", "/login", "/logout", "/webhooks/")
-STATIC_URLS = ["/", "/pricing", "/guides", "/reports", "/bot", "/contact", "/privacy", "/terms"]
+STATIC_URLS = ["/", "/pricing", "/tools", "/guides", "/reports", "/bot", "/contact", "/privacy", "/terms"]
 
 
 def _base() -> str:
@@ -105,7 +111,7 @@ def robots():
 
 @router.get("/sitemap.xml")
 def sitemap():
-    urls = STATIC_URLS + [f"/guides/{g['slug']}" for g in GUIDES]
+    urls = STATIC_URLS + [f"/tools/{t['slug']}" for t in TOOLS] + [f"/guides/{g['slug']}" for g in GUIDES]
     body = "".join(f"<url><loc>{_base()}{u}</loc></url>" for u in urls)
     body += "".join(f"<url><loc>{_base()}/r/{r['id']}</loc><lastmod>{r['when'].strftime('%Y-%m-%d')}</lastmod></url>"
                     for r in public_reports(5000))
@@ -116,6 +122,7 @@ def sitemap():
 @router.get("/llms.txt", response_class=PlainTextResponse)
 def llms():
     s = config.settings
+    tools = "\n".join(f"- [{t['h1']}]({_base()}/tools/{t['slug']}): {t['description']}" for t in TOOLS)
     guides = "\n".join(f"- [{g['title']}]({_base()}/guides/{g['slug']}): {g['summary']}" for g in GUIDES)
     return f"""# infoharness
 
@@ -133,9 +140,40 @@ def llms():
 - [Public reports]({_base()}/reports): latest docs-health grade for every publicly scanned site
 - [About the crawler]({_base()}/bot): user agent `InfoharnessBot`, how to block it
 
+## Tools (each is the same scanner, framed for one task)
+{tools}
+
 ## Guides
 {guides}
 """
+
+
+@router.get("/tools", response_class=HTMLResponse)
+def tools_index(request: Request):
+    return templates.TemplateResponse(request, "tools/index.html", {"tools": TOOLS, "max_pages": config.settings.max_pages})
+
+
+@router.get("/tools/{slug}", response_class=HTMLResponse)
+def tool_page(request: Request, slug: str):
+    t = TOOL_BY_SLUG.get(slug)
+    if t is None:
+        return templates.TemplateResponse(request, "notfound.html", status_code=404)
+    related = [BY_SLUG[g] for g in t["guides"] if g in BY_SLUG]
+    others = [x for x in TOOLS if x["slug"] != slug][:6]
+    base = config.settings.public_base_url
+    ld = {"@context": "https://schema.org", "@graph": [
+        {"@type": "WebApplication", "name": t["h1"], "url": f"{base}/tools/{slug}", "description": t["description"],
+         "applicationCategory": "DeveloperApplication", "operatingSystem": "Web",
+         "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD"},
+         "provider": {"@type": "Organization", "name": "infoharness", "url": base}},
+        {"@type": "FAQPage", "mainEntity": [
+            {"@type": "Question", "name": q, "acceptedAnswer": {"@type": "Answer", "text": a}} for q, a in t["faq"]]},
+        {"@type": "BreadcrumbList", "itemListElement": [
+            {"@type": "ListItem", "position": 1, "name": "infoharness", "item": f"{base}/"},
+            {"@type": "ListItem", "position": 2, "name": "Tools", "item": f"{base}/tools"},
+            {"@type": "ListItem", "position": 3, "name": t["h1"]}]}]}
+    return templates.TemplateResponse(request, "tools/page.html", {
+        "ld": ld, "tool": t, "related": related, "others": others, "max_pages": config.settings.max_pages})
 
 
 @router.get("/guides", response_class=HTMLResponse)
