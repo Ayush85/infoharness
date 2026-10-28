@@ -195,3 +195,27 @@ def test_seo_surface(env):
     # private pages stay out of the index
     assert 'content="noindex"' in c.get("/login").text
     assert "immutable" in c.get("/static/fonts/schibsted-grotesk-latin-wght-normal.woff2").headers["cache-control"]
+
+
+def test_dashboard_history_and_site_detail(env, monkeypatch, docs_site):
+    from app import monitor, worker
+    out = Outbox()
+    monkeypatch.setattr("app.accounts.send_email", out)
+    monkeypatch.setattr("app.monitor.send_email", out)
+    c = TestClient(app)
+    login(c, out)
+    c.post("/account/sites", data={"url": f"{docs_site}/docs/", "interval": 30})
+    monitor.queue_due_scans()
+    while worker.run_once():
+        pass
+    page = c.get("/account").text
+    assert "watched sites" in page and "average score" in page and "Scan history (1)" in page
+    with session_scope() as s:
+        sid = s.scalars(select(Site)).one().id
+    assert "Biggest problems" in c.get(f"/account/sites/{sid}").text
+    hist = c.get("/account/history").text
+    assert "Watched" in hist and "/r/" in hist
+    other = TestClient(app)
+    login(other, out, email="stranger@example.com")
+    assert other.get(f"/account/sites/{sid}", follow_redirects=False).headers["location"] == "/account"
+    assert "Watched" not in other.get("/account/history").text

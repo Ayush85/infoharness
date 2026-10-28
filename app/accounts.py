@@ -11,13 +11,13 @@ from urllib.parse import quote
 
 from fastapi import APIRouter, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 
 from app import config
 from app.auth import (COOKIE, SESSION_DAYS, clean_email, client_hash, current_user, issue_token, make_session,
                       read_session, redeem_token, site_limit)
 from app.crawler import normalize
-from app.db import IgnoredIssue, Issue, Scan, Site, SiteScan, SiteSetting, User, Waitlist, session_scope, utcnow
+from app.db import IgnoredIssue, Issue, Scan, ScanMeta, Site, SiteScan, SiteSetting, User, Waitlist, session_scope, utcnow
 from app.mailer import send_email
 from app.security import UnsafeURL, check_url_safe, normalize_input_url
 from app.templating import templates
@@ -85,25 +85,101 @@ def logout():
 
 
 # ---------------------------------------------------------------- account
+def _scan_row(sc: Scan, source: str, site_url: str = "") -> dict:
+    sm = sc.summary or {}
+    return {"id": sc.id, "url": sc.url, "status": sc.status, "grade": sc.grade, "score": round(sc.score or 0) if sc.score is not None else None,
+            "issues": sm.get("total_issues"), "pages": sc.pages_crawled, "by_type": sm.get("by_type", {}),
+            "when": sc.finished_at or sc.created_at, "source": source, "error": sc.error}
+
+
 @router.get("/account", response_class=HTMLResponse)
 def account(request: Request, msg: str = "", err: str = ""):
     me = current_user(request)
     if not me:
         return _redirect("/login")
-    with session_scope() as s:
-        sites = list(s.scalars(select(Site).where(Site.user_id == me["id"]).order_by(Site.id)))
     limit = site_limit(me["plan"])
     with session_scope() as s:
-        trend, hooks = {}, {}
+        sites = list(s.scalars(select(Site).where(Site.user_id == me["id"]).order_by(Site.id)))
+        trend, hooks, last_two = {}, {}, {}
         for site in sites:
-            rows = s.execute(select(Scan.score).join(SiteScan, SiteScan.scan_id == Scan.id).where(
+            rows = s.scalars(select(Scan).join(SiteScan, SiteScan.scan_id == Scan.id).where(
                 SiteScan.site_id == site.id, Scan.status == "done").order_by(Scan.created_at.desc()).limit(24)).all()
-            trend[site.id] = [round(r[0] or 0) for r in reversed(rows)]
+            trend[site.id] = [round(r.score or 0) for r in reversed(rows)]
+            last_two[site.id] = [(r.summary or {}).get("total_issues", 0) for r in rows[:2]]
             st = s.get(SiteSetting, site.id)
             hooks[site.id] = bool(st and st.webhook_url)
-    return _page(request, "account.html", {"trend": trend, "hooks": hooks, "sites": sites, "limit": limit, "intervals": INTERVALS,
+        graded = [x for x in sites if x.last_status == "done" and x.last_score is not None]
+        dash = {
+            "sites": len(sites), "avg": round(sum(x.last_score for x in graded) / len(graded)) if graded else None,
+            "open": sum(last_two[x.id][0] for x in graded if last_two.get(x.id)),
+            "worse": sum(1 for x in graded if len(last_two[x.id]) == 2 and last_two[x.id][0] > last_two[x.id][1]),
+            "failing": sum(1 for x in sites if x.last_status == "failed"),
+            "scans": s.scalar(select(func.count()).select_from(Scan).where(or_(
+                Scan.id.in_(select(SiteScan.scan_id).where(SiteScan.site_id.in_([x.id for x in sites] or [0]))),
+                Scan.id.in_(select(ScanMeta.scan_id).where(ScanMeta.user_id == me["id"]))))),
+        }
+    return _page(request, "account.html", {"trend": trend, "hooks": hooks, "last_two": last_two, "dash": dash, "sites": sites,
+                                           "limit": limit, "intervals": INTERVALS,
                                            "allowed": [30] if me["plan"] != "pro" else [1, 7, 30],
                                            "msg": msg, "err": err, "now": utcnow()})
+
+
+@router.get("/account/history", response_class=HTMLResponse)
+def history(request: Request, page: int = 1):
+    me = current_user(request)
+    if not me:
+        return _redirect("/login")
+    page = max(1, page)
+    with session_scope() as s:
+        sites = {x.id: x for x in s.scalars(select(Site).where(Site.user_id == me["id"]))}
+        watched = {r.scan_id: r.site_id for r in s.scalars(select(SiteScan).where(SiteScan.site_id.in_(list(sites) or [0])))}
+        scans = s.scalars(select(Scan).where(or_(
+            Scan.id.in_(list(watched) or [""]),
+            Scan.id.in_(select(ScanMeta.scan_id).where(ScanMeta.user_id == me["id"]))))
+            .order_by(Scan.created_at.desc()).limit(101).offset((page - 1) * 100)).all()
+        rows = [_scan_row(sc, "Watched" if sc.id in watched else "Manual") for sc in scans[:100]]
+        more = len(scans) > 100
+    return _page(request, "history.html", {"rows": rows, "page": page, "more": more})
+
+
+@router.get("/account/sites/{site_id}", response_class=HTMLResponse)
+def site_detail(request: Request, site_id: int, msg: str = "", err: str = ""):
+    me = current_user(request)
+    if not me:
+        return _redirect("/login")
+    with session_scope() as s:
+        site = s.get(Site, site_id)
+        if not site or site.user_id != me["id"]:
+            return _redirect("/account")
+        scans = s.scalars(select(Scan).join(SiteScan, SiteScan.scan_id == Scan.id).where(SiteScan.site_id == site_id)
+                          .order_by(Scan.created_at.desc()).limit(100)).all()
+        rows = [_scan_row(sc, "Watched") for sc in scans]
+        done = [r for r in rows if r["status"] == "done"]
+        ignored = [fp for fp in s.scalars(select(IgnoredIssue.fingerprint).where(IgnoredIssue.site_id == site_id))]
+        st = s.get(SiteSetting, site_id)
+        top = []
+        if done:
+            top = list(s.scalars(select(Issue).where(Issue.scan_id == done[0]["id"])
+                                 .order_by(Issue.points.desc()).limit(8)))
+            s.expunge_all()
+        return _page(request, "site.html", {
+            "site": site, "rows": rows, "latest": done[0] if done else None, "top": top,
+            "trend": [r["score"] for r in reversed(done[:40])], "intervals": INTERVALS,
+            "ignored": [{"fp": fp, "title": fp.split("|")[-1], "type": fp.split("|")[0]} for fp in ignored],
+            "has_hook": bool(st and st.webhook_url), "msg": msg, "err": err})
+
+
+@router.post("/account/sites/{site_id}/unignore")
+def unignore(request: Request, site_id: int, fp: str = Form("")):
+    me = current_user(request)
+    if not me:
+        return _redirect("/login")
+    with session_scope() as s:
+        site = s.get(Site, site_id)
+        row = s.get(IgnoredIssue, (site_id, fp)) if site and site.user_id == me["id"] else None
+        if row:
+            s.delete(row)
+    return _redirect(f"/account/sites/{site_id}")
 
 
 @router.post("/account/sites")

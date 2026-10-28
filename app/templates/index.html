@@ -20,6 +20,7 @@
       <h1>Your docs disagree with themselves.</h1>
       <p class="lede">Paste your help center address. In about two minutes you get a graded list of the pages that contradict, repeat or outdate each other, the ones that make your support bot answer wrong.</p>
       {{ scan_form("hero") }}
+      <div id="recent" class="recent" hidden><h2 style="font-size:1rem;margin:1rem 0 .3rem">Your recent scans on this device</h2><ul></ul></div>
       <div class="examples">
         <span>No docs handy? Try</span>
         <button type="button" class="chip-link" data-example="docs.python-requests.org/en/latest/">Requests</button>
@@ -101,4 +102,18 @@
   </div>
 </section>
 {% endblock %}
-{% block scripts %}<script src="/static/index.js?v={{ version }}" defer></script>{% endblock %}
+{% block scripts %}<script>
+document.addEventListener("DOMContentLoaded", function () {
+  try {
+    var list = JSON.parse(localStorage.getItem("ih_recent") || "[]"), box = document.getElementById("recent");
+    if (!box || !list.length) return;
+    var ul = box.querySelector("ul");
+    list.slice(0, 8).forEach(function (x) {
+      var li = document.createElement("li"), a = document.createElement("a");
+      a.href = "/r/" + encodeURIComponent(x.id); a.textContent = x.url + " · " + x.grade + " (" + x.score + ")";
+      li.appendChild(a); ul.appendChild(li);
+    });
+    box.hidden = false;
+  } catch (e) {}
+});
+</script><script src="/static/index.js?v={{ version }}" defer></script>{% endblock %}

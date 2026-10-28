@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}{{ site.url|replace('https://','')|replace('http://','') }} · My sites · infoharness{% endblock %}
+{% block head %}<meta name="robots" content="noindex">{% endblock %}
+{% block content %}
+<div class="wrap page">
+  <p class="crumb"><a href="/account">← My sites</a></p>
+  <h1>{{ site.url|replace('https://','')|replace('http://','') }}</h1>
+  {% if msg %}<p class="flash" role="status">{{ msg }}</p>{% endif %}
+  {% if latest %}
+  <div class="stats">
+    <div class="stat"><span class="n"><span class="grade-chip g-{{ latest.grade|lower }}">{{ latest.grade }}</span></span><span class="l">current grade</span></div>
+    <div class="stat"><span class="n">{{ latest.score }}</span><span class="l">score / 100</span></div>
+    <div class="stat"><span class="n">{{ latest.issues }}</span><span class="l">open problems</span></div>
+    <div class="stat"><span class="n">{{ latest.pages }}</span><span class="l">pages read</span></div>
+  </div>
+  {% if trend|length > 1 %}<section class="panel"><h2 style="font-size:1.1rem">Score over time</h2><div class="bigspark">{{ trend|spark(640, 120) }}</div>
+    <p class="form-note">Last {{ trend|length }} scans, from {{ trend[0] }} to {{ trend[-1] }}.</p></section>{% endif %}
+  <section class="panel"><h2 style="font-size:1.1rem">Problems by type</h2>
+    <ul class="bytype">{% for k, n in latest.by_type.items() if n %}<li><span>{{ k|replace('_', ' ')|capitalize }}</span><strong>{{ n }}</strong></li>{% else %}<li>No problems found.</li>{% endfor %}</ul>
+    <p><a class="button secondary small" href="/r/{{ latest.id }}">Open the latest report</a></p></section>
+  {% if top %}<section class="panel"><h2 style="font-size:1.1rem">Biggest problems right now</h2>
+    <ul class="pages">{% for i in top %}<li><span class="k">{{ i.severity }}</span>{{ i.title }}</li>{% endfor %}</ul></section>{% endif %}
+  {% else %}<p class="lede">No finished scan yet. The first one starts shortly after you add the site.</p>{% endif %}
+
+  <section class="panel"><h2 style="font-size:1.1rem">Scan history</h2>
+    {% if rows %}<div class="table-wrap"><table class="ledger"><thead><tr><th>Date</th><th>Grade</th><th>Score</th><th>Issues</th><th>Pages</th><th></th></tr></thead><tbody>
+    {% for r in rows %}<tr><td>{{ r.when.strftime('%d %b %Y %H:%M') }}</td><td>{% if r.status == 'done' %}{{ r.grade }}{% else %}{{ r.status }}{% endif %}</td>
+      <td>{{ r.score if r.score is not none else '' }}</td><td>{{ r.issues if r.issues is not none else '' }}</td><td>{{ r.pages or '' }}</td><td><a href="/r/{{ r.id }}">Open</a></td></tr>{% endfor %}
+    </tbody></table></div>{% else %}<p>No scans yet.</p>{% endif %}</section>
+
+  <section class="panel"><h2 style="font-size:1.1rem">Alerts</h2>
+    <p class="form-note">Rescans {{ intervals.get(site.interval_days, site.interval_days) }}. Email alerts are on. Slack, Discord or webhook alerts: {{ 'on' if has_hook else 'off' }} (change them on the <a href="/account">dashboard</a>).</p>
+    {% if ignored %}<h3 style="font-size:1rem">Ignored findings</h3><ul class="pages">
+      {% for g in ignored %}<li><form method="post" action="/account/sites/{{ site.id }}/unignore" class="inline"><input type="hidden" name="fp" value="{{ g.fp }}"><span class="k">{{ g.type|replace('_', ' ') }}</span>{{ g.title }} <button class="secondary small" type="submit">Stop ignoring</button></form></li>{% endfor %}</ul>{% endif %}
+  </section>
+</div>
+{% endblock %}

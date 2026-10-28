@@ -5,6 +5,14 @@
 <div class="wrap page">
   <h1>My sites</h1>
   <p class="lede" style="font-size:1rem">Signed in as <strong>{{ me.email }}</strong>. Everything is free.</p>
+  <nav class="subnav" aria-label="Account"><a href="/account" aria-current="page">Dashboard</a><a href="/account/history">Scan history ({{ dash.scans }})</a></nav>
+  <div class="stats">
+    <div class="stat"><span class="n">{{ dash.sites }}</span><span class="l">watched sites</span></div>
+    <div class="stat"><span class="n">{{ dash.avg if dash.avg is not none else '–' }}</span><span class="l">average score</span></div>
+    <div class="stat"><span class="n">{{ dash.open }}</span><span class="l">open problems</span></div>
+    <div class="stat {{ 'bad' if dash.worse }}"><span class="n">{{ dash.worse }}</span><span class="l">sites with more problems than last time</span></div>
+    {% if dash.failing %}<div class="stat bad"><span class="n">{{ dash.failing }}</span><span class="l">failed last scan</span></div>{% endif %}
+  </div>
   {% if msg %}<p class="flash" role="status">{{ msg }}</p>{% endif %}
   {% if err %}<p class="flash error" role="alert">{{ err }}</p>{% endif %}
 
@@ -16,7 +24,7 @@
         <a class="grade-chip g-{{ s.last_grade|lower }}" href="/r/{{ s.last_scan_id }}" aria-label="Grade {{ s.last_grade }}. Open report">{{ s.last_grade }}</a>
       {% else %}<span class="grade-chip g-none" aria-label="{{ 'Last scan failed' if s.last_status == 'failed' else 'First scan pending' }}">{{ '!' if s.last_status == 'failed' else '…' }}</span>{% endif %}
       <div>
-        <div class="site-url">{{ s.url|replace('https://','')|replace('http://','') }}</div>
+        <div class="site-url"><a href="/account/sites/{{ s.id }}">{{ s.url|replace('https://','')|replace('http://','') }}</a></div>
         <div class="site-meta">
           {% if s.last_status == 'failed' %}Last scan failed: {{ (s.last_error or 'unknown error')|trim('.') }}.
           {% elif s.last_status == 'pending' %}First scan is queued; we'll email you the result.

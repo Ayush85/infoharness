@@ -155,4 +155,11 @@
   {% endif %}
 </div>
 {% endblock %}
-{% block scripts %}<script src="/static/report.js?v={{ version }}" defer></script>{% endblock %}
+{% block scripts %}<script src="/static/report.js?v={{ version }}" defer></script>
+{% if scan.status == 'done' %}<script>
+try {
+  var KEY = "ih_recent", list = JSON.parse(localStorage.getItem(KEY) || "[]").filter(function (x) { return x.id !== {{ scan.id|tojson }}; });
+  list.unshift({ id: {{ scan.id|tojson }}, url: {{ shown|tojson }}, grade: {{ scan.grade|tojson }}, score: {{ (scan.score or 0)|round|int }}, at: Date.now() });
+  localStorage.setItem(KEY, JSON.stringify(list.slice(0, 30)));
+} catch (e) {}
+</script>{% endif %}{% endblock %}
