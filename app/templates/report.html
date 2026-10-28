@@ -129,6 +129,7 @@
           </ul>
         {% endif %}
         <div class="issue-foot"><button type="button" class="secondary small" data-copy-text="{{ i|issue_md(scan.root) }}">Copy as task</button>
+          <button type="button" class="secondary small" data-feedback="{{ i.id }}" title="Tell us this finding is wrong, so we can fix the check">Not a problem</button>
           {% if owner_site %}<form method="post" action="/r/{{ scan.id }}/ignore" class="inline"><input type="hidden" name="issue_id" value="{{ i.id }}">
             {% if i.id in ignored_ids %}<input type="hidden" name="undo" value="1"><button type="submit" class="secondary small">Stop ignoring</button>
             {% else %}<button type="submit" class="secondary small" title="No more alerts about this one">Ignore</button>{% endif %}</form>{% endif %}</div>

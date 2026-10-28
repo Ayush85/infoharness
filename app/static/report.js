@@ -68,6 +68,18 @@
     b.addEventListener("click", () => copy(document.getElementById(b.dataset.copyFrom).value, b)));
   document.querySelectorAll("[data-print]").forEach((b) => b.addEventListener("click", () => window.print()));
 
+  // "Not a problem": one tap, no form. Tells us which checks raise false alarms.
+  document.querySelectorAll("[data-feedback]").forEach((b) => b.addEventListener("click", async () => {
+    const label = b.textContent;
+    b.disabled = true;
+    try {
+      const res = await fetch(`/api/issues/${b.dataset.feedback}/feedback`, {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ verdict: "not_a_problem" }) });
+      b.textContent = res.ok ? "Thanks, noted" : (res.status === 429 ? "Enough for today" : "Try again later");
+      if (res.ok) b.closest(".issue").classList.add("dismissed");
+    } catch (e) { b.textContent = "Try again later"; b.disabled = false; setTimeout(() => (b.textContent = label), 2000); }
+  }));
+
   // Filter chips: show one type at a time, or all.
   const filters = [...document.querySelectorAll("[data-filter]")];
   const groups = [...document.querySelectorAll("[data-group]")];

@@ -22,7 +22,7 @@ from app.db import IgnoredIssue, Issue, Scan, ScanMeta, Site, SiteScan, init_eng
 from app.auth import client_hash, current_user
 from app.scoring import TYPE_LABELS
 from app.templating import report_md, templates, verdict, verdict_sub
-from app import accounts, seo
+from app import accounts, extras, seo
 from app.security import UnsafeURL, check_url_safe, normalize_input_url
 
 logging.basicConfig(level=os.getenv("LOG_LEVEL", "INFO"), format="%(asctime)s %(levelname)s %(name)s: %(message)s")
@@ -37,6 +37,7 @@ async def lifespan(_app: FastAPI):
 app = FastAPI(title="infoharness", version=__version__, docs_url=None, redoc_url=None, lifespan=lifespan)
 app.include_router(accounts.router)
 app.include_router(seo.router)
+app.include_router(extras.router)
 from fastapi.middleware.gzip import GZipMiddleware  # noqa: E402
 
 app.add_middleware(GZipMiddleware, minimum_size=1000)

@@ -239,3 +239,27 @@ def test_keyword_pages_and_sitemap(env):
         assert c.get(f"/guides/{g['slug']}").status_code == 200 and f"/guides/{g['slug']}" in sitemap
     assert c.get("/tools").status_code == 200 and c.get("/tools/nope").status_code == 404
     assert "/tools/documentation-checker" in c.get("/").text
+
+
+def test_feedback_and_admin_view(env, monkeypatch, docs_site):
+    from app import worker
+    monkeypatch.setenv("ADMIN_EMAILS", "admin@example.com")
+    from app import config
+    config.reload_settings()
+    out = Outbox()
+    monkeypatch.setattr("app.accounts.send_email", out)
+    c = TestClient(app)
+    sid = c.post("/api/scans", json={"url": f"{docs_site}/docs"}).json()["id"]
+    worker.run_once()
+    issue_id = c.get(f"/api/scans/{sid}").json()["issues"][0]["id"]
+    assert c.post(f"/api/issues/{issue_id}/feedback", json={"verdict": "bogus"}).status_code == 400
+    assert c.post(f"/api/issues/{issue_id}/feedback", json={"verdict": "not_a_problem"}).status_code == 200
+    assert c.post(f"/api/issues/{issue_id}/feedback", json={"verdict": "not_a_problem"}).status_code == 200  # same visitor: updated, not duplicated
+    with session_scope() as s:
+        from app.db import Feedback
+        assert len(s.scalars(select(Feedback)).all()) == 1
+    assert c.get("/admin/feedback").status_code == 404
+    admin = TestClient(app)
+    login(admin, out, email="admin@example.com")
+    page = admin.get("/admin/feedback").text
+    assert "Finding feedback" in page and "not a problem" in page

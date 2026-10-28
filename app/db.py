@@ -207,3 +207,17 @@ class IgnoredIssue(Base):
     site_id: Mapped[int] = mapped_column(Integer, primary_key=True)
     fingerprint: Mapped[str] = mapped_column(String(400), primary_key=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class Feedback(Base):
+    """A reader's verdict on one finding ("not a problem"), used to find checks that raise false alarms."""
+    __tablename__ = "feedback"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    issue_id: Mapped[int] = mapped_column(Integer, index=True)
+    scan_id: Mapped[str] = mapped_column(String(32), index=True)
+    issue_type: Mapped[str] = mapped_column(String(32))
+    verdict: Mapped[str] = mapped_column(String(16))  # not_a_problem | useful
+    note: Mapped[str] = mapped_column(String(500), default="")
+    client_hash: Mapped[str] = mapped_column(String(64), index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, index=True)
