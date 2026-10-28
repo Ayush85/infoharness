@@ -29,6 +29,7 @@
     {% set path = request.url.path %}
     <nav class="main-nav" aria-label="Main">
       <a href="/#how" >How it works</a>
+      <a href="/tools" {% if path.startswith('/tools') %}aria-current="page"{% endif %}>Tools</a>
       <a href="/guides" {% if path.startswith('/guides') %}aria-current="page"{% endif %}>Guides</a>
       <a href="/pricing" {% if path == '/pricing' %}aria-current="page"{% endif %}>Free</a>
       {% if me %}<a class="nav-cta" href="/account">My sites</a>{% else %}<a class="keep" href="/login" {% if path == '/login' %}aria-current="page"{% endif %}>Sign in</a>{% endif %}
