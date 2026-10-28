@@ -86,3 +86,19 @@ templates.env.globals.update(type_labels=TYPE_LABELS, version=__version__, setti
 templates.env.filters["mark_values"] = mark_values
 templates.env.filters["issue_md"] = lambda i, root="": issue_md(i, root)
 templates.env.globals.update(type_why=TYPE_WHY)
+
+
+def spark(values, w: int = 96, h: int = 22):
+    """A tiny inline SVG line of recent scores (0-100)."""
+    from markupsafe import Markup
+    vals = list(values)
+    if len(vals) < 2:
+        return ""
+    step = (w - 4) / (len(vals) - 1)
+    pts = " ".join(f"{2 + i * step:.1f},{2 + (h - 4) * (1 - max(0, min(100, v)) / 100):.1f}" for i, v in enumerate(vals))
+    last = pts.split()[-1].split(",")
+    return Markup(f'<svg width="{w}" height="{h}" viewBox="0 0 {w} {h}" aria-hidden="true"><polyline points="{pts}" fill="none" '
+                  f'stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><circle cx="{last[0]}" cy="{last[1]}" r="2.2" fill="#d23b3b"/></svg>')
+
+
+templates.env.filters["spark"] = spark

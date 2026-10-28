@@ -17,7 +17,7 @@ from app import config
 from app.auth import (COOKIE, SESSION_DAYS, clean_email, client_hash, current_user, issue_token, make_session,
                       read_session, redeem_token, site_limit)
 from app.crawler import normalize
-from app.db import Scan, Site, SiteScan, User, Waitlist, session_scope, utcnow
+from app.db import IgnoredIssue, Issue, Scan, Site, SiteScan, SiteSetting, User, Waitlist, session_scope, utcnow
 from app.mailer import send_email
 from app.security import UnsafeURL, check_url_safe, normalize_input_url
 from app.templating import templates
@@ -93,7 +93,15 @@ def account(request: Request, msg: str = "", err: str = ""):
     with session_scope() as s:
         sites = list(s.scalars(select(Site).where(Site.user_id == me["id"]).order_by(Site.id)))
     limit = site_limit(me["plan"])
-    return _page(request, "account.html", {"sites": sites, "limit": limit, "intervals": INTERVALS,
+    with session_scope() as s:
+        trend, hooks = {}, {}
+        for site in sites:
+            rows = s.execute(select(Scan.score).join(SiteScan, SiteScan.scan_id == Scan.id).where(
+                SiteScan.site_id == site.id, Scan.status == "done").order_by(Scan.created_at.desc()).limit(24)).all()
+            trend[site.id] = [round(r[0] or 0) for r in reversed(rows)]
+            st = s.get(SiteSetting, site.id)
+            hooks[site.id] = bool(st and st.webhook_url)
+    return _page(request, "account.html", {"trend": trend, "hooks": hooks, "sites": sites, "limit": limit, "intervals": INTERVALS,
                                            "allowed": [30] if me["plan"] != "pro" else [1, 7, 30],
                                            "msg": msg, "err": err, "now": utcnow()})
 
@@ -113,11 +121,54 @@ async def add_site(request: Request, url: str = Form(""), interval: int = Form(3
     with session_scope() as s:
         have = s.scalar(select(func.count()).select_from(Site).where(Site.user_id == me["id"]))
         if have >= site_limit(me["plan"]):
-            return _redirect(f"/account?err={quote('You have reached your site limit. Upgrade to watch more sites.')}")
+            return _redirect(f"/account?err={quote('You have reached the limit of watched sites.')}")
         if s.scalar(select(Site.id).where(Site.user_id == me["id"], Site.url == norm)):
             return _redirect(f"/account?err={quote('You already watch that site.')}")
         s.add(Site(user_id=me["id"], url=norm, interval_days=interval))  # next_run_at = now: first scan starts at once
     return _redirect(f"/account?msg={quote('Site added. The first scan starts in a minute and we will email you the result.')}")
+
+
+@router.post("/account/sites/{site_id}/webhook")
+async def set_webhook(request: Request, site_id: int, url: str = Form("")):
+    me = current_user(request)
+    if not me:
+        return _redirect("/login")
+    url = url.strip()
+    if url:
+        try:
+            if not url.startswith("https://"):
+                raise UnsafeURL("The webhook address must start with https://")
+            await asyncio.to_thread(check_url_safe, url)
+        except UnsafeURL as e:
+            return _redirect(f"/account?err={quote(str(e))}")
+    with session_scope() as s:
+        site = s.get(Site, site_id)
+        if not site or site.user_id != me["id"]:
+            return _redirect("/account")
+        st = s.get(SiteSetting, site_id) or SiteSetting(site_id=site_id)
+        st.webhook_url = url or None
+        s.add(st)
+    return _redirect(f"/account?msg={quote('Webhook saved. Alerts will also be posted there.' if url else 'Webhook removed.')}")
+
+
+@router.post("/r/{scan_id}/ignore")
+def ignore_issue(request: Request, scan_id: str, issue_id: int = Form(0), undo: str = Form("")):
+    from app.monitor import fingerprint
+    me = current_user(request)
+    if not me:
+        return _redirect("/login")
+    with session_scope() as s:
+        link = s.get(SiteScan, scan_id)
+        site = s.get(Site, link.site_id) if link else None
+        issue = s.get(Issue, issue_id)
+        if site and site.user_id == me["id"] and issue and issue.scan_id == scan_id:
+            fp = fingerprint(issue)[:400]
+            row = s.get(IgnoredIssue, (site.id, fp))
+            if undo and row:
+                s.delete(row)
+            elif not undo and not row:
+                s.add(IgnoredIssue(site_id=site.id, fingerprint=fp))
+    return _redirect(f"/r/{scan_id}")
 
 
 @router.post("/account/sites/{site_id}/delete")
@@ -128,6 +179,11 @@ def delete_site(request: Request, site_id: int):
     with session_scope() as s:
         site = s.get(Site, site_id)
         if site and site.user_id == me["id"]:
+            st = s.get(SiteSetting, site_id)
+            if st:
+                s.delete(st)
+            for row in s.scalars(select(IgnoredIssue).where(IgnoredIssue.site_id == site_id)):
+                s.delete(row)
             s.delete(site)
     return _redirect("/account")
 

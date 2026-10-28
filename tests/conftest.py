@@ -102,6 +102,7 @@ def env(tmp_path, monkeypatch):
     monkeypatch.setenv("CHECK_EXTERNAL_LINKS", "false")
     monkeypatch.setenv("LLM_PROVIDER", "none")
     monkeypatch.setenv("SCANS_PER_IP_PER_DAY", "3")
+    monkeypatch.setenv("PAID_PLANS", "true")
     for k, v in os.environ.items():
         pass
     config.reload_settings()

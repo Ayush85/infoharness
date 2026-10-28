@@ -4,8 +4,7 @@
 {% block content %}
 <div class="wrap page">
   <h1>My sites</h1>
-  <p class="lede" style="font-size:1rem">Signed in as <strong>{{ me.email }}</strong> on the <strong>{{ 'Pro' if me.plan == 'pro' else 'Free' }}</strong> plan.
-    {% if me.plan != 'pro' %}<a href="/pricing">See Pro</a>{% endif %}</p>
+  <p class="lede" style="font-size:1rem">Signed in as <strong>{{ me.email }}</strong>. Everything is free.</p>
   {% if msg %}<p class="flash" role="status">{{ msg }}</p>{% endif %}
   {% if err %}<p class="flash error" role="alert">{{ err }}</p>{% endif %}
 
@@ -23,7 +22,13 @@
           {% elif s.last_status == 'pending' %}First scan is queued; we'll email you the result.
           {% else %}Score {{ s.last_score|round|int }} / 100.{% endif %}
           Rescans {{ intervals.get(s.interval_days, s.interval_days) }}, next on {{ s.next_run_at.strftime('%d %b') }}.
+          {% if trend[s.id]|length > 1 %}<span class="spark" title="Score over the last {{ trend[s.id]|length }} scans: {{ trend[s.id]|join(', ') }}">{{ trend[s.id]|spark }}</span>{% endif %}
         </div>
+        <details class="hook"><summary>Slack, Discord or webhook alerts{% if hooks[s.id] %} (on){% endif %}</summary>
+          <form method="post" action="/account/sites/{{ s.id }}/webhook" class="field-row">
+            <input name="url" type="text" inputmode="url" placeholder="https://hooks.slack.com/services/…" aria-label="Webhook address">
+            <button class="secondary small" type="submit">{{ 'Replace' if hooks[s.id] else 'Save' }}</button></form>
+          <p class="form-note">Leave empty and save to remove it.</p></details>
       </div>
       <div class="site-actions">
         <form method="post" action="/account/sites/{{ s.id }}/scan"><button class="secondary small" type="submit">Scan now</button></form>
@@ -50,7 +55,7 @@
       <button type="submit">Watch site</button>
     </div>
   </form>
-  {% else %}<p class="form-note">You're using all {{ limit }} watched site{{ 's' if limit != 1 }} on your plan. {% if me.plan != 'pro' %}<a href="/pricing">Upgrade for more</a>{% endif %}</p>{% endif %}
+  {% else %}<p class="form-note">You're using all {{ limit }} watched site{{ 's' if limit != 1 }}.</p>{% endif %}
 
   <form method="post" action="/logout" style="margin-top:36px"><button class="secondary" type="submit">Sign out</button></form>
 </div>

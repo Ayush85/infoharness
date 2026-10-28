@@ -133,11 +133,44 @@ def test_webhook_disabled_without_secret(env):
     assert TestClient(app).post("/webhooks/lemonsqueezy", content=b"{}").status_code == 404
 
 
-def test_pricing_and_waitlist(env):
+def test_free_mode_gives_everyone_full_limits_and_alerts(env, monkeypatch, docs_site):
+    monkeypatch.setenv("PAID_PLANS", "false")
+    from app import config, worker
+    config.reload_settings()
+    out = Outbox()
+    monkeypatch.setattr("app.accounts.send_email", out)
+    monkeypatch.setattr("app.monitor.send_email", out)
+    hooks = []
+    monkeypatch.setattr("app.monitor.send_webhook", lambda url, text: hooks.append((url, text)) or True)
     c = TestClient(app)
-    assert "Pro opens soon" in c.get("/pricing").text
-    r = c.post("/pricing/waitlist", data={"email": "me@example.com"})
-    assert "on the list" in r.text
+    login(c, out)
+    assert "Everything is free" in c.get("/account").text and "Free. All of it." in c.get("/pricing").text
+    c.post("/account/sites", data={"url": f"{docs_site}/docs/", "interval": 1})
+    with session_scope() as s:
+        site = s.scalars(select(Site)).one()
+        assert site.interval_days == 1  # daily is allowed for everyone
+        sid = site.id
+    assert "err=" in c.post(f"/account/sites/{sid}/webhook", data={"url": "http://x.example/hook"}, follow_redirects=False).headers["location"]
+    monkeypatch.setattr("app.accounts.check_url_safe", lambda u: None)
+    c.post(f"/account/sites/{sid}/webhook", data={"url": "https://hooks.example.com/abc"})
+    worker.run_once()
+    from app import monitor
+    monitor.queue_due_scans()
+    while worker.run_once():
+        pass
+    assert hooks and "docs health" in hooks[0][1].lower()
+    with session_scope() as s:
+        scan_id = s.scalars(select(Site)).one().last_scan_id
+        issue = s.scalars(select(Issue).where(Issue.scan_id == scan_id)).first()
+        issue_id = issue.id
+    page = c.get(f"/r/{scan_id}").text
+    assert "Ignore" in page and "Slack" in c.get("/account").text
+    c.post(f"/r/{scan_id}/ignore", data={"issue_id": issue_id})
+    assert "Ignored" in c.get(f"/r/{scan_id}").text
+    other = TestClient(app)
+    login(other, out, email="stranger@example.com")
+    other.post(f"/r/{scan_id}/ignore", data={"issue_id": issue_id, "undo": "1"})
+    assert "Ignored" in c.get(f"/r/{scan_id}").text  # a stranger cannot change it
 
 
 def test_seo_surface(env):

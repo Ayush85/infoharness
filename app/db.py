@@ -190,3 +190,20 @@ def session_scope():
         raise
     finally:
         s.close()
+
+
+class SiteSetting(Base):
+    """Per-site alert settings (separate table so `sites` never changes shape in production)."""
+    __tablename__ = "site_settings"
+
+    site_id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    webhook_url: Mapped[str | None] = mapped_column(String(2048), nullable=True)
+
+
+class IgnoredIssue(Base):
+    """A finding the owner of a watched site chose to ignore: it no longer triggers alerts."""
+    __tablename__ = "ignored_issues"
+
+    site_id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    fingerprint: Mapped[str] = mapped_column(String(400), primary_key=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)

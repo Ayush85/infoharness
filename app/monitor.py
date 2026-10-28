@@ -8,7 +8,7 @@ from sqlalchemy import select
 
 from app import config
 from app.auth import effective_plan
-from app.db import Issue, Scan, ScanMeta, Site, SiteScan, User, session_scope, utcnow
+from app.db import IgnoredIssue, Issue, Scan, ScanMeta, Site, SiteScan, SiteSetting, User, session_scope, utcnow
 from app.mailer import send_email
 from app.scoring import TYPE_LABELS
 
@@ -64,7 +64,10 @@ def after_scan(scan_id: str) -> None:
         site.last_grade, site.last_score = scan.grade, scan.score
         issues = list(s.scalars(select(Issue).where(Issue.scan_id == scan_id).order_by(Issue.id)))
         old = {fingerprint(i) for i in s.scalars(select(Issue).where(Issue.scan_id == previous.id))} if previous else set()
-        new = [i for i in issues if fingerprint(i) not in old]
+        ignored = {r for r in s.scalars(select(IgnoredIssue.fingerprint).where(IgnoredIssue.site_id == site.id))}
+        new = [i for i in issues if fingerprint(i) not in old and fingerprint(i) not in ignored]
+        setting = s.get(SiteSetting, site.id)
+        hook = setting.webhook_url if setting else None
         worse = bool(previous and previous.grade and scan.grade and GRADES.index(scan.grade) > GRADES.index(previous.grade))
         if previous and not new and not worse:
             return
@@ -74,6 +77,23 @@ def after_scan(scan_id: str) -> None:
         to = owner.email if owner else None
     if to:
         send_email(to, subject, text)
+    if hook:
+        send_webhook(hook, f"{subject}\n\n{text}")
+
+
+def send_webhook(url: str, text: str) -> bool:
+    """Post to a Slack/Discord/generic incoming webhook. Never raises; the URL is re-checked every time."""
+    import httpx
+    from app.security import UnsafeURL, check_url_safe
+    try:
+        if not url.startswith("https://"):
+            return False
+        check_url_safe(url)
+        r = httpx.post(url, json={"text": text[:3500], "content": text[:1900]}, timeout=8, follow_redirects=False)
+        return r.status_code < 300
+    except (UnsafeURL, httpx.HTTPError, OSError) as e:
+        log.warning("webhook failed: %s", e)
+        return False
 
 
 def build_alert(url: str, scan: Scan, previous: Scan | None, new: list[Issue], total: int) -> str:

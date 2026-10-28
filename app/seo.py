@@ -31,7 +31,7 @@ FAQS = [
     ("Will it work on my site?", "It works on any documentation site or help center that serves its text as HTML, which covers most platforms. Sites that only draw their content with JavaScript show up as unreadable.", None),
     ("How are contradictions found?", "By comparing the numbers, limits and dates that different pages state about the same thing. Each finding shows both quotes side by side so you can judge it in seconds.", ("Read the guide", "/guides/contradictory-docs-ai-assistants")),
     ("Who can see my report?", "Anyone who has the link. Reports of publicly scanned sites also appear in the public reports list and in search results, so teams can compare. Reports for sites monitored from an account stay private. To remove a report, email us from the site's domain.", None),
-    ("What does it cost?", "Scanning is free. The Pro plan watches your docs on a schedule and emails you when something new breaks.", ("See pricing", "/pricing")),
+    ("What does it cost?", "Nothing. Scanning, watching your sites on a schedule and alerts by email, Slack or webhook are all free.", ("What is included", "/pricing")),
     ("Can I stop the crawler?", "Yes. Add InfoharnessBot to your robots.txt and it will skip your whole site.", ("How to block it", "/bot#block")),
 ]
 
@@ -125,11 +125,11 @@ def llms():
 - Paste a docs or help-center URL; no signup. The crawler reads up to {s.max_pages} public pages, obeys robots.txt and does not run JavaScript.
 - Every finding shows the exact quotes and page links, so it can be checked in seconds.
 - Contradictions are found by comparing the numbers, limits and dates that different pages state about the same fact.
-- Paid plan: watch sites on a schedule and get an email when new problems appear.
+- Free account: watch sites on a schedule and get an email, Slack or webhook alert when new problems appear.
 
 ## Pages
 - [Scan a site]({_base()}/): the scanner
-- [Pricing]({_base()}/pricing): free scans, Pro for scheduled monitoring
+- [Free]({_base()}/pricing): everything is free, including scheduled monitoring and alerts
 - [Public reports]({_base()}/reports): latest docs-health grade for every publicly scanned site
 - [About the crawler]({_base()}/bot): user agent `InfoharnessBot`, how to block it
 

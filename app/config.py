@@ -41,12 +41,12 @@ class Settings:
     # Link checking
     check_external_links: bool = field(default_factory=lambda: _bool("CHECK_EXTERNAL_LINKS", True))
     max_link_checks: int = field(default_factory=lambda: _int("MAX_LINK_CHECKS", 400))
-    pro_max_link_checks: int = field(default_factory=lambda: _int("PRO_MAX_LINK_CHECKS", 3000))
+    pro_max_link_checks: int = field(default_factory=lambda: _int("PRO_MAX_LINK_CHECKS", 1500))
     link_check_seconds: int = field(default_factory=lambda: _int("LINK_CHECK_SECONDS", 240))
 
     # Pro plan scan size (free scans use MAX_PAGES / MAX_SCAN_SECONDS)
-    pro_max_pages: int = field(default_factory=lambda: _int("PRO_MAX_PAGES", 2000))
-    pro_scan_seconds: int = field(default_factory=lambda: _int("PRO_SCAN_SECONDS", 1500))
+    pro_max_pages: int = field(default_factory=lambda: _int("PRO_MAX_PAGES", 500))
+    pro_scan_seconds: int = field(default_factory=lambda: _int("PRO_SCAN_SECONDS", 900))
 
     # Abuse protection
     scans_per_ip_per_day: int = field(default_factory=lambda: _int("SCANS_PER_IP_PER_DAY", 5))
@@ -79,8 +79,9 @@ class Settings:
     smtp_user: str = field(default_factory=lambda: os.getenv("SMTP_USER", ""))
     smtp_password: str = field(default_factory=lambda: os.getenv("SMTP_PASSWORD", ""))
     admin_emails: str = field(default_factory=lambda: os.getenv("ADMIN_EMAILS", ""))  # comma separated; always Pro
+    paid_plans: bool = field(default_factory=lambda: os.getenv("PAID_PLANS", "false").lower() in ("1", "true", "yes"))
     free_sites: int = field(default_factory=lambda: _int("FREE_SITES", 1))
-    pro_sites: int = field(default_factory=lambda: _int("PRO_SITES", 5))
+    pro_sites: int = field(default_factory=lambda: _int("PRO_SITES", 10))
     checkout_url: str = field(default_factory=lambda: os.getenv("CHECKOUT_URL", ""))  # hosted checkout (Lemon Squeezy / Paddle)
     ls_webhook_secret: str = field(default_factory=lambda: os.getenv("LS_WEBHOOK_SECRET", ""))
     pro_price: str = field(default_factory=lambda: os.getenv("PRO_PRICE", "$19"))

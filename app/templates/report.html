@@ -25,7 +25,7 @@
     {% if diff %}<p class="notice diff">Since the <a href="/r/{{ diff.prev_id }}">previous scan</a> ({{ diff.prev_when.strftime('%d %b %Y') }}, grade {{ diff.prev_grade }}): <strong>{{ diff.new }} new</strong> and <strong>{{ diff.fixed }} fixed</strong>.</p>{% endif %}
     {% if scan.summary.partial %}
     <p class="notice coverage">This scan read {{ scan.pages_crawled }} of {{ scan.summary.pages_found or scan.pages_crawled }} pages we found, so it is a sample, not the whole site. Orphan pages are not reported for partial scans because we can't tell what the unread pages link to.
-      {% if me and me.plan != 'pro' %}<a href="/pricing">Pro scans up to 2,000 pages.</a>{% endif %}</p>
+      {% if not me %}<a href="/login">Sign in (free)</a> to scan up to {{ settings().pro_max_pages }} pages.{% endif %}</p>
     {% endif %}
     {% if scan.summary.links_skipped %}<p class="notice coverage">{{ scan.summary.links_skipped }} links were not checked (large platforms such as Google, Facebook or LinkedIn block automated checks, or the link limit was reached).</p>{% endif %}
     {% if history|length > 1 %}
@@ -94,7 +94,7 @@
     <ol class="issues">
     {% for i in items %}
       <li class="issue sev-{{ i.severity }}">
-        <div class="issue-head"><h3>{{ i.title }}{% if diff and i.id in diff.new_ids %} <span class="tag-new">New</span>{% endif %}</h3><span class="sev" title="How likely this is to cause a wrong answer">{{ i.severity }}</span></div>
+        <div class="issue-head"><h3>{% if i.id in ignored_ids %}<span class="tag-ignored">Ignored</span> {% endif %}{{ i.title }}{% if diff and i.id in diff.new_ids %} <span class="tag-new">New</span>{% endif %}</h3><span class="sev" title="How likely this is to cause a wrong answer">{{ i.severity }}</span></div>
         {% if i.detail %}<p class="issue-detail">{{ i.detail }}</p>{% endif %}
         {% if i.quote_a and i.quote_b %}
           <div class="compare">
@@ -121,7 +121,10 @@
             {% endif %}
           </ul>
         {% endif %}
-        <div class="issue-foot"><button type="button" class="secondary small" data-copy-text="{{ i|issue_md(scan.root) }}">Copy as task</button></div>
+        <div class="issue-foot"><button type="button" class="secondary small" data-copy-text="{{ i|issue_md(scan.root) }}">Copy as task</button>
+          {% if owner_site %}<form method="post" action="/r/{{ scan.id }}/ignore" class="inline"><input type="hidden" name="issue_id" value="{{ i.id }}">
+            {% if i.id in ignored_ids %}<input type="hidden" name="undo" value="1"><button type="submit" class="secondary small">Stop ignoring</button>
+            {% else %}<button type="submit" class="secondary small" title="No more alerts about this one">Ignore</button>{% endif %}</form>{% endif %}</div>
       </li>
     {% endfor %}
     </ol>

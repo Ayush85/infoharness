@@ -66,6 +66,8 @@ def current_user(request: Request) -> dict | None:
 
 
 def effective_plan(user: User) -> str:
+    if not config.settings.paid_plans:
+        return "pro"  # the product is free: every signed-in user gets the full limits
     return "pro" if user.plan == "pro" or user.email in config.settings.admins else "free"
 
 

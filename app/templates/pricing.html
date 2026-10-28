@@ -1,49 +1,30 @@
 {% extends "base.html" %}
-{% block title %}Pricing · infoharness{% endblock %}
+{% block title %}Free docs health checker: pricing · infoharness{% endblock %}
+{% block description %}infoharness is free: scan any public documentation site, watch up to {{ settings().pro_sites }} sites on a schedule, and get email, Slack or webhook alerts. No card, no trial.{% endblock %}
 {% block content %}
 <div class="wrap page">
-  <h1>Scan for free. Pay to be warned.</h1>
-  <p class="lede">One-off scans cost nothing. Pro watches your docs on a schedule and emails you the moment a new contradiction or broken link appears.</p>
+  <h1>Free. All of it.</h1>
+  <p class="lede">No card, no trial, no paid tier. Scan any public docs site, then sign in with your email to watch your own and get warned when something new breaks.</p>
   <div class="plans">
-    <section class="plan">
-      <h2>Free</h2>
+    <section class="plan pro">
+      <h2>Everything included</h2>
       <p class="price">$0</p>
-      <p class="form-note" style="margin:0">Always free</p>
       <ul>
-        <li>{{ settings().scans_per_ip_per_day }} scans a day, up to {{ settings().max_pages }} pages each</li>
-        <li>{{ settings().free_sites }} watched site, rescanned monthly</li>
-        <li>Email when new problems appear</li>
+        <li>Scan any public docs site, no account needed</li>
+        <li>Signed in: up to {{ settings().pro_max_pages }} pages per scan and {{ settings().pro_sites }} watched sites</li>
+        <li>Rescans daily, weekly or monthly</li>
+        <li>Alerts by email, Slack, Discord or webhook, only for new problems</li>
+        <li>Score trend, scan-to-scan changes, ignore list, CSV export</li>
         <li>Shareable report and README badge</li>
       </ul>
-      <a class="button secondary" href="{{ '/account' if me else '/login' }}">{{ 'Open my sites' if me else 'Create a free account' }}</a>
-    </section>
-    <section class="plan pro">
-      <h2>Pro</h2>
-      <p class="price">{{ settings().pro_price }} <small>per month</small></p>
-      <p class="form-note" style="margin:0">Cancel any time</p>
-      <ul>
-        <li>{{ settings().pro_sites }} watched sites</li>
-        <li>Rescans daily, weekly or monthly</li>
-        <li>Everything in Free</li>
-      </ul>
-      {% if checkout %}
-        <a class="button" href="{{ checkout }}">Upgrade to Pro</a>
-        <p class="form-note">Use the email you sign in with so your plan switches on automatically.</p>
-      {% elif joined %}
-        <p class="flash">You're on the list. We'll email you when Pro opens.</p>
-      {% else %}
-        <form method="post" action="/pricing/waitlist" class="scan-form">
-          <label for="wl">Pro opens soon. Get an email when it does.</label>
-          <div class="field-row"><input id="wl" name="email" type="text" inputmode="email" autocomplete="email" placeholder="you@company.com" required><button type="submit">Join the list</button></div>
-        </form>
-      {% endif %}
+      <a class="button" href="{{ '/account' if me else '/login' }}">{{ 'Open my sites' if me else 'Sign in with email' }}</a>
     </section>
   </div>
   <div class="faq" style="margin-top:56px">
-    <h2 style="margin-bottom:12px">Pricing questions</h2>
-    <details><summary>What does "watched" mean?</summary><p>We rescan the site on the schedule you pick and compare with the last scan. You only get an email when something new is wrong, or the grade drops.</p></details>
+    <h2 style="margin-bottom:12px">Questions</h2>
+    <details><summary>Is it really free?</summary><p>Yes. Scans are rate limited so the service stays available for everyone.</p></details>
+    <details><summary>What does "watched" mean?</summary><p>We rescan the site on the schedule you pick and compare with the last scan. You only get an alert when something new is wrong, or the grade drops.</p></details>
     <details><summary>Do I need an account to scan?</summary><p>No. Scanning a site, sharing the report and using the badge all work without signing in.</p></details>
-    <details><summary>Can I cancel?</summary><p>Yes, any time. You keep Pro until the end of the period you paid for.</p></details>
   </div>
 </div>
 {% endblock %}

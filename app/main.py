@@ -18,8 +18,8 @@ from sqlalchemy import func, select
 
 from app import __version__, config
 from app.crawler import normalize
-from app.db import Issue, Scan, init_engine, session_scope, utcnow
-from app.auth import client_hash
+from app.db import IgnoredIssue, Issue, Scan, ScanMeta, Site, SiteScan, init_engine, session_scope, utcnow
+from app.auth import client_hash, current_user
 from app.scoring import TYPE_LABELS
 from app.templating import report_md, templates, verdict
 from app import accounts, seo
@@ -109,12 +109,22 @@ def report(request: Request, scan_id: str):
                 new_ids = {k for k, v in cur.items() if v not in old}
                 diff = {"prev_id": prev.id, "prev_when": prev.finished_at or prev.created_at, "prev_grade": prev.grade,
                         "new_ids": new_ids, "new": len(new_ids), "fixed": len(old - set(cur.values()))}
+        owner_site, ignored_ids = None, set()
+        me = current_user(request)
+        if me and scan.status == "done":
+            link = s.get(SiteScan, scan_id)
+            site = s.get(Site, link.site_id) if link else None
+            if site and site.user_id == me["id"]:
+                from app.monitor import fingerprint
+                owner_site = site.id
+                ig = set(s.scalars(select(IgnoredIssue.fingerprint).where(IgnoredIssue.site_id == site.id)))
+                ignored_ids = {i.id for i in issues if fingerprint(i)[:400] in ig}
         indexable = seo.is_public_latest(scan)
         latest_id = scan.id
         if not indexable and scan.status == "done" and not (scan.client_hash or "").startswith("site:") and (scan.pages_crawled or 0) >= seo.MIN_PUBLIC_PAGES:
             latest_id = s.scalar(select(Scan.id).where(Scan.url == scan.url, Scan.status == "done",
                                                        ~Scan.client_hash.like("site:%")).order_by(Scan.created_at.desc()).limit(1)) or scan.id
-        ctx = {"diff": diff, "indexable": indexable, "latest_id": latest_id, "history": history, "scan": scan, "grouped": [(t, grouped[t]) for t in TYPE_LABELS if t in grouped],
+        ctx = {"owner_site": owner_site, "ignored_ids": ignored_ids, "diff": diff, "indexable": indexable, "latest_id": latest_id, "history": history, "scan": scan, "grouped": [(t, grouped[t]) for t in TYPE_LABELS if t in grouped],
                "verdict": verdict(scan, issues), "total": len(issues), "report_md": report_md(scan, [(t, grouped[t]) for t in TYPE_LABELS if t in grouped]) if issues else "",
                "share_url": f"{config.settings.public_base_url}/r/{scan.id}",
                "badge_url": f"{config.settings.public_base_url}/badge/{scan.id}.svg"}
@@ -168,9 +178,18 @@ async def create_scan(body: ScanIn, request: Request):
         waiting = db.scalar(select(func.count()).select_from(Scan).where(Scan.status == "queued"))
         if waiting >= s.max_queue:
             raise HTTPException(503, "We're busy scanning other sites right now. Try again in a few minutes.")
+        me = current_user(request)
+        if me:
+            mine = db.scalar(select(func.count()).select_from(ScanMeta).join(Scan, Scan.id == ScanMeta.scan_id).where(
+                ScanMeta.user_id == me["id"], Scan.created_at >= now - timedelta(days=1)))
+            if mine >= s.scans_per_user_per_day:
+                raise HTTPException(429, f"You've reached your limit of {s.scans_per_user_per_day} scans per day.")
         scan = Scan(url=key, client_hash=who)
         db.add(scan)
         db.flush()
+        if me:
+            db.add(ScanMeta(scan_id=scan.id, user_id=me["id"],
+                            max_pages=s.pro_max_pages if me["plan"] == "pro" else s.max_pages))
         return JSONResponse({"id": scan.id, "cached": False, "report_url": f"/r/{scan.id}"}, status_code=201)
 
 
