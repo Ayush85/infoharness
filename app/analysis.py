@@ -66,6 +66,34 @@ class PairCandidate:
 
 # ---------------------------------------------------------------- chunking
 
+# Pages that are dated or versioned by nature (release notes, changelogs, blog posts, per-version pages).
+# Old dates, old versions and different numbers there are expected, not mistakes.
+HISTORICAL = re.compile(
+    r"/(changelog|change-?log|changes|release-?notes?|releases?|whats?-?new|news|blog|posts?|articles?|archive|archives|history|"
+    r"migrat\w*|upgrad\w*|versions?|go\d+\.\d+|v\d+(?:\.\d+)*|\d+\.\d+(?:\.\d+)?|\d{4}/\d{1,2})(?=[/._-]|$)", re.I)
+NON_DOC_EXT = re.compile(r"\.(txt|md|json|xml|csv|rss|atom|yaml|yml)$", re.I)
+
+
+def is_historical(url: str) -> bool:
+    return bool(HISTORICAL.search(urlsplit(url).path))
+
+
+def path_key(url: str) -> str:
+    """The page address without query or fragment: ?tab=cli and ?platform=mac are views of one page."""
+    p = urlsplit(url)
+    return f"{p.scheme}://{p.netloc}{p.path.rstrip('/')}"
+
+
+def version_shape(url: str) -> str:
+    """Path with digit runs replaced, so go1.12 and go1.19 (or /v2/ and /v3/) look the same."""
+    return re.sub(r"\d+", "#", path_key(url))
+
+
+def same_family(a: str, b: str) -> bool:
+    """Two addresses that are the same page in another view or another version: not duplicates or conflicts."""
+    return path_key(a) == path_key(b) or version_shape(a) == version_shape(b)
+
+
 WORD = re.compile(r"[A-Za-z][A-Za-z'\-]{2,}")
 SENT_SPLIT = re.compile(r"(?<=[.!?])\s+(?=[A-Z0-9\"'(])")
 
@@ -175,6 +203,8 @@ def check_duplicate_pages(pages: list[PageDoc], *, threshold: float = 0.9) -> tu
 
     dup_pairs: set[tuple[int, int]] = set()
     for pc in pairs:
+        if same_family(pages[eligible[pc.a]].url, pages[eligible[pc.b]].url):
+            continue  # a tab/platform view or another version of the same page
         parent[find(pc.a)] = find(pc.b)
         dup_pairs.add((eligible[pc.a], eligible[pc.b]))
     clusters: dict[int, list[int]] = defaultdict(list)
@@ -312,8 +342,16 @@ def extract_facts(chunks: list[Chunk]) -> list[Fact]:
     return facts
 
 
+TASK_UNITS = {"minute", "second", "hour"}  # "takes about 10 minutes" is about one task, not a policy
+
+
+def _title_overlap(a: str, b: str) -> float:
+    ta, tb = {w.lower() for w in WORD.findall(a or "")} - STOP, {w.lower() for w in WORD.findall(b or "")} - STOP
+    return len(ta & tb) / len(ta | tb) if ta and tb else 0.0
+
+
 def numeric_conflicts(facts: list[Fact], *, min_jaccard: float = 0.5, min_shared: int = 3,
-                      limit: int = 60) -> list[tuple[Fact, Fact, float]]:
+                      limit: int = 60, pages: list[PageDoc] | None = None) -> list[tuple[Fact, Fact, float]]:
     by_unit: dict[str, list[Fact]] = defaultdict(list)
     for f in facts:
         by_unit[f.unit].append(f)
@@ -327,6 +365,12 @@ def numeric_conflicts(facts: list[Fact], *, min_jaccard: float = 0.5, min_shared
                 fj = group[j]
                 if fi.page == fj.page or fi.value == fj.value:
                     continue
+                if pages is not None:
+                    pa, pb = pages[fi.page], pages[fj.page]
+                    if same_family(pa.url, pb.url) or is_historical(pa.url) or is_historical(pb.url):
+                        continue
+                    if unit in TASK_UNITS and _title_overlap(pa.title, pb.title) < 0.5:
+                        continue  # durations of different tasks, not a contradiction
                 shared = fi.context & fj.context
                 if len(shared) < min_shared:
                     continue
@@ -376,12 +420,15 @@ def numeric_finding(fa: Fact, fb: Fact, pages: list[PageDoc], *, verified: bool)
 YEAR_CONTEXT = re.compile(
     r"(last\s+updated|last\s+modified|updated(?:\s+on)?|as\s+of|published(?:\s+on)?|effective(?:\s+(?:date|from))?|"
     r"reviewed(?:\s+on)?)\s*[:\-–]?\s*(?:[A-Za-z]{3,9}\.?\s+(?:\d{1,2}(?:st|nd|rd|th)?,?\s+)?)?((?:19|20)\d{2})", re.I)
-VERSION_RE = re.compile(r"\b(?:v|version\s+)(\d{1,3})(?:\.\d+){0,2}\b", re.I)
+VERSION_RE = re.compile(r"(?<![/\w.])(?:v|version\s+)(\d{1,3})(?:\.\d+){0,2}\b(?!/)", re.I)
 
 
 def check_staleness(pages: list[PageDoc], *, now: datetime | None = None, stale_years: int = 3) -> list[Finding]:
     now = now or datetime.now(timezone.utc)
     findings: list[Finding] = []
+
+    all_pages = pages
+    pages = [p for p in pages if not is_historical(p.url)]  # changelogs, release notes and blog posts are dated by design
 
     # 1. Explicit "Last updated 2019"-style dates in the text.
     for p in pages:
@@ -453,7 +500,7 @@ def check_thin_pages(pages: list[PageDoc], *, min_words: int = 30) -> list[Findi
     boiler = boilerplate_keys(pages)
     out = []
     for p in pages:
-        if GENERATED_PATH.search(urlsplit(p.url).path):
+        if GENERATED_PATH.search(urlsplit(p.url).path) or NON_DOC_EXT.search(urlsplit(p.url).path):
             continue
         if sum(len(b.text.split()) for b in p.blocks if b.kind == "code") >= 60:
             continue  # a code reference or example page is real content even with little prose

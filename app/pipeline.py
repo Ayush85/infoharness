@@ -8,7 +8,7 @@ from urllib.parse import urlsplit
 
 from app import config, embeddings, llm
 from app.analysis import (Finding, PageDoc, build_chunks, check_duplicate_pages, check_duplicate_sections,
-                          check_orphans, check_staleness, check_thin_pages, extract_facts, numeric_conflicts,
+                          check_orphans, check_staleness, NON_DOC_EXT, check_thin_pages, extract_facts, numeric_conflicts,
                           numeric_finding, top_pairs, _short)
 from app.analysis import admin_target_kind
 from app.crawler import CrawlResult, Crawler, _bare_host, check_links, is_bot_hostile
@@ -120,7 +120,8 @@ async def _run(url: str, prog: Progress, max_pages: int | None = None) -> tuple[
 
     if crawl.stopped_reason.startswith("robots"):
         raise ScanError("This site's robots.txt asks crawlers not to read these pages, so we didn't scan it.")
-    ok_pages = [p for p in crawl.pages.values() if p.extracted and p.status < 400]
+    ok_pages = [p for p in crawl.pages.values() if p.extracted and p.status < 400
+                and not NON_DOC_EXT.search(urlsplit(p.url).path)]
     if not ok_pages:
         statuses = {p.status for p in crawl.pages.values()}
         if statuses and all(st == 0 for st in statuses):
@@ -158,7 +159,7 @@ async def _run(url: str, prog: Progress, max_pages: int | None = None) -> tuple[
 
     # ---- contradictions
     facts = extract_facts(chunks)
-    numeric = numeric_conflicts(facts)
+    numeric = numeric_conflicts(facts, pages=pages)
     prog.set("checking links", 72, force=True)
 
     # ---- links (runs while nothing else is pending; cheap)

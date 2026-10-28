@@ -123,3 +123,21 @@ def test_bot_hostile_hosts_and_admin_links():
     assert admin_target_kind("https://staging.x.com/a", "x.com")
     assert admin_target_kind("https://x.com/docs/a", "x.com") is None
     assert check_orphans([], "https://x.com/", partial=True) == []
+
+
+def test_benchmark_false_positive_guards():
+    from datetime import datetime, timezone
+    from app.analysis import (PageDoc, Block, is_historical, same_family, check_staleness, check_thin_pages,
+                              extract_facts, build_chunks, numeric_conflicts, VERSION_RE)
+    assert is_historical("https://x.dev/doc/go1.12") and is_historical("https://x.com/blog/2021/post") \
+        and is_historical("https://x.com/docs/changelog/migration_10.html") and not is_historical("https://x.com/docs/refunds")
+    assert same_family("https://x.com/a/b?platform=mac", "https://x.com/a/b") and same_family("https://x.dev/go1.7", "https://x.dev/go1.19")
+    assert not same_family("https://x.com/docs/refunds", "https://x.com/docs/payments-faq")
+    assert not VERSION_RE.search("get list v1/Node : get") and VERSION_RE.search("the SDK v5 supports") 
+
+    def page(url, title, text):
+        return PageDoc(url=url, title=title, blocks=[Block("text", text, "")] if False else [], word_count=len(text.split()))
+    old = PageDoc(url="https://x.com/changelog/old", title="Old", blocks=[Block(kind="text", text="Document last updated: June 9, 2015 and more words here to fill the page out nicely.", heading="")], word_count=20)
+    assert check_staleness([old]) == []
+    txt = PageDoc(url="https://x.com/docs/page/llms.txt", title="t", blocks=[Block(kind="text", text="{count}", heading="")], word_count=1)
+    assert check_thin_pages([txt]) == []
