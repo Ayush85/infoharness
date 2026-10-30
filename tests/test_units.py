@@ -186,3 +186,20 @@ def test_cross_language_pages_not_compared():
     b = PageDoc(url="https://x.test/de/a", title="a", blocks=[], word_count=0, lang="de")
     c = PageDoc(url="https://x.test/b", title="b", blocks=[], word_count=0, lang="")
     assert different_languages(a, b) and not different_languages(a, c)
+
+
+def test_pagespeed_parse_and_cdn_cgi_not_crawled():
+    from app import speed
+    data = {"lighthouseResult": {
+        "categories": {"performance": {"score": 0.42}, "accessibility": {"score": 0.97}, "seo": {"score": 1}},
+        "audits": {"largest-contentful-paint": {"numericValue": 4600}, "cumulative-layout-shift": {"numericValue": 0.02},
+                   "unused-javascript": {"title": "Reduce unused JavaScript", "score": 0.3,
+                                         "details": {"type": "opportunity", "overallSavingsMs": 1450}}}},
+        "loadingExperience": {"overall_category": "AVERAGE"}}
+    r = speed.parse(data)
+    assert [c["rating"] for c in r["scores"][:2]] == ["poor", "good"]
+    assert r["vitals"][0]["rating"] == "poor" and r["vitals"][1]["rating"] == "good"
+    assert r["opportunities"][0]["saving"] == "1.4 s" and r["field"]["category"] == "average"
+    assert speed.parse({}) is None
+    from app.crawler import INFRA_PATH
+    assert INFRA_PATH.match("/cdn-cgi/l/email-protection") and not INFRA_PATH.match("/docs/cdn-cgi/")

@@ -18,6 +18,10 @@ from app.security import UnsafeURL, check_url_safe
 
 log = logging.getLogger(__name__)
 
+# Paths a CDN or host serves for itself (Cloudflare's email obfuscation link is /cdn-cgi/l/email-protection and
+# answers 404 to bots). They are not part of the docs, so they are never crawled or reported as broken.
+INFRA_PATH = re.compile(r"^/(?:cdn-cgi|_next/image|_vercel|\.well-known|cdn-cgi)/", re.I)
+
 SKIP_EXT = re.compile(
     r"\.(png|jpe?g|gif|webp|svg|ico|zip|gz|tgz|tar|rar|7z|mp4|mp3|wav|mov|avi|woff2?|ttf|eot|css|js|json|"
     r"xml|rss|atom|csv|xlsx?|docx?|pptx?|dmg|exe|apk|bin|iso)$", re.I)
@@ -126,7 +130,7 @@ class Crawler:
         path = p.path or "/"
         if not (path.startswith(self.prefix) or path + "/" == self.prefix):
             return False
-        return not SKIP_EXT.search(path)
+        return not SKIP_EXT.search(path) and not INFRA_PATH.match(path)
 
     # ---------- HTTP ----------
     async def fetch(self, url: str, *, method: str = "GET", want_body: bool = True) -> FetchResult:

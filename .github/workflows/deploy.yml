@@ -98,6 +98,7 @@ jobs:
           SECRET_KEY: ${{ secrets.SECRET_KEY }}
           LS_WEBHOOK_SECRET: ${{ secrets.LS_WEBHOOK_SECRET }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          PAGESPEED_API_KEY: ${{ secrets.PAGESPEED_API_KEY }}
           MAIL_FROM: ${{ vars.MAIL_FROM }}
           ADMIN_EMAILS: ${{ vars.ADMIN_EMAILS }}
           CHECKOUT_URL: ${{ vars.CHECKOUT_URL }}
@@ -110,7 +111,7 @@ jobs:
         run: |
           # Only non-empty values are written, into the server's .env (never printed). Empty = leave as is.
           lines=""
-          for k in RESEND_API_KEY SECRET_KEY LS_WEBHOOK_SECRET ANTHROPIC_API_KEY MAIL_FROM ADMIN_EMAILS CHECKOUT_URL PRO_PRICE LLM_PROVIDER CONTACT_EMAIL WITH_BROWSER RENDER_JS WORKER_MEM; do
+          for k in RESEND_API_KEY SECRET_KEY LS_WEBHOOK_SECRET ANTHROPIC_API_KEY PAGESPEED_API_KEY MAIL_FROM ADMIN_EMAILS CHECKOUT_URL PRO_PRICE LLM_PROVIDER CONTACT_EMAIL WITH_BROWSER RENDER_JS WORKER_MEM; do
             v="${!k}"; [ -n "$v" ] && lines+="$k=$v"$'\n'
           done
           [ -n "$lines" ] || { echo "No extra settings configured."; exit 0; }

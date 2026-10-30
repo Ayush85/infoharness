@@ -11,7 +11,8 @@ from app.analysis import (Finding, PageDoc, build_chunks, check_duplicate_pages,
                           check_orphans, check_staleness, NON_DOC_EXT, different_languages, check_thin_pages, extract_facts, numeric_conflicts,
                           numeric_finding, top_pairs, _short)
 from app.analysis import admin_target_kind
-from app.crawler import CrawlResult, Crawler, _bare_host, check_links, is_bot_hostile
+from app import speed
+from app.crawler import INFRA_PATH, CrawlResult, Crawler, _bare_host, check_links, is_bot_hostile
 from app.db import Issue, Page, Scan, ScanMeta, session_scope, utcnow
 from app.scoring import score
 
@@ -78,6 +79,8 @@ def run_scan(scan_id: str) -> None:
             "links_checked": getattr(crawl, "links_checked", 0),
             "links_skipped": getattr(crawl, "links_skipped", 0),
         })
+        if getattr(crawl, "speed", None):
+            summary["speed"] = crawl.speed
         _save(scan_id, crawl, pages, findings, value, grade, summary)
     except ScanError as e:
         _fail(scan_id, str(e))
@@ -116,6 +119,7 @@ async def _run(url: str, prog: Progress, max_pages: int | None = None) -> tuple[
     deadline = time.monotonic() + budget * 0.6
     crawler = Crawler(url, max_pages=max_pages, deadline=deadline,
                       on_progress=lambda n, mx, url=None, found=None: _crawl_progress(prog, n, mx, url, found))
+    speed_task = asyncio.create_task(speed.measure(url))  # Google measures while we crawl
     crawl = await crawler.run()
     prog.set("analysing content", 62, pages=len(crawl.pages), force=True)
 
@@ -178,6 +182,11 @@ async def _run(url: str, prog: Progress, max_pages: int | None = None) -> tuple[
     findings += check_thin_pages(pages)
     findings += check_orphans(pages, crawl.start_url, partial=_is_partial(crawl))
     prog.set("saving report", 96, force=True)
+    try:  # it ran while we crawled, so this usually returns at once
+        crawl.speed = await asyncio.wait_for(speed_task, timeout=45)
+    except Exception:
+        speed_task.cancel()
+        crawl.speed = None
     return findings, pages, crawl
 
 
@@ -221,7 +230,7 @@ async def _link_findings(crawl: CrawlResult, crawler: Crawler, prog: Progress, p
 
     # Internal pages we crawled that came back broken
     for url, page in crawl.pages.items():
-        if admin_target_kind(url, site_host):
+        if admin_target_kind(url, site_host) or INFRA_PATH.match(urlsplit(url).path or "/"):
             continue
         if page.status in (404, 410) or page.status >= 500:
             if crawl.link_sources.get(url):
@@ -231,6 +240,8 @@ async def _link_findings(crawl: CrawlResult, crawler: Crawler, prog: Progress, p
     same_site, external, admin = [], [], {}
     candidates = set(crawl.out_of_scope_links) | set(crawl.overflow)
     for u in sorted(candidates):
+        if INFRA_PATH.match(urlsplit(u).path or "/"):
+            continue
         kind = admin_target_kind(u, site_host)
         if kind:
             admin[u] = kind

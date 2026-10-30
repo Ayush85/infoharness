@@ -44,7 +44,12 @@ def verdict(scan, issues) -> str:
         return "No problems found. These docs are in good shape for AI assistants."
     if important == 0:
         return f"No serious problems. {total} small thing{'s' if total != 1 else ''} left to tidy."
-    return (f"{important} problem{'s' if important != 1 else ''} could make an AI assistant give a wrong answer. "
+    wrong_answer = sum(1 for i in issues if i.severity in ("high", "medium")
+                       and i.type in ("contradiction", "duplicate_page", "duplicate_section", "stale"))
+    if wrong_answer == 0:  # only links, drafts or thin pages: real work, but it can't make an assistant quote a wrong answer
+        return (f"{important} thing{'s' if important != 1 else ''} to fix. "
+                "Nothing in your content contradicts itself or looks out of date.")
+    return (f"{wrong_answer} problem{'s' if wrong_answer != 1 else ''} could make an AI assistant give a wrong answer. "
             "Fix those first.")
 
 

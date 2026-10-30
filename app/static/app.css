@@ -461,3 +461,26 @@ button.ghost { all: unset; box-sizing: border-box; cursor: pointer; font-size: .
 button.ghost:hover, button.ghost:focus-visible { color: var(--ink); text-decoration-color: currentColor; }
 button.ghost:focus-visible { outline: 2px solid var(--focus, currentColor); outline-offset: 2px; border-radius: 3px; }
 @media (max-width:640px){.menu-list{min-width:0;width:min(14rem,calc(100vw - 36px))}}
+
+/* ---------- page speed card */
+.speed { margin: 28px 0 8px; background: var(--sheet); border: 1px solid var(--line); border-radius: var(--r-l); padding: 24px 26px; }
+.speed-head h2 { font-size: 1.25rem; margin: 0 0 4px; }
+.speed-head p { margin: 0; color: var(--ink-soft); font-size: .92rem; }
+.speed-head code { font-size: .86rem; overflow-wrap: anywhere; }
+.speed-cols { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px 40px; margin-top: 20px; }
+.speed-col h3 { font-size: 1rem; margin: 0 0 14px; }
+.rings { list-style: none; margin: 0 0 16px; padding: 0; display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.ring { --c: var(--ink-soft); text-align: center; font-size: .78rem; color: var(--ink-soft); line-height: 1.25; }
+.ring.good { --c: var(--ok); } .ring.ok { --c: #b86e00; } .ring.poor { --c: var(--pen); }
+.ring b { display: grid; place-items: center; width: 54px; height: 54px; margin: 0 auto 6px; border-radius: 50%; font-size: 1.1rem; color: var(--c);
+  background: radial-gradient(closest-side, var(--sheet) 76%, transparent 78% 100%), conic-gradient(var(--c) calc(var(--p) * 1%), var(--line) 0); }
+.vitals { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; }
+.vitals li { display: flex; justify-content: space-between; gap: 12px; padding: 7px 0 7px 12px; border-bottom: 1px solid var(--line); border-left: 3px solid var(--line-strong); font-size: .92rem; }
+.vitals li.good { border-left-color: var(--ok); } .vitals li.ok { border-left-color: #b86e00; } .vitals li.poor { border-left-color: var(--pen); }
+.vitals span { color: var(--ink-soft); }
+.opp-h { margin: 16px 0 6px; font-weight: 640; font-size: .9rem; }
+.opps { margin: 0; padding-left: 18px; font-size: .9rem; } .opps li { margin: 3px 0; } .opps span { color: var(--ink-soft); white-space: nowrap; }
+.field-note { margin: 12px 0 0; font-size: .88rem; color: var(--ink-soft); }
+.speed-foot { margin: 18px 0 0; font-size: .92rem; font-weight: 560; }
+@media (max-width: 760px) { .speed { padding: 20px 18px; } .speed-cols { grid-template-columns: 1fr; } }
+@media print { .speed-foot { display: none; } }

@@ -88,6 +88,25 @@
     </div>
   </section>
 
+  {% set speed = scan.summary.get('speed') %}
+  {% if speed %}
+  <section class="speed" aria-labelledby="speed-h">
+    <div class="speed-head"><h2 id="speed-h">Page speed</h2>
+      <p>Measured by Google PageSpeed Insights for <code>{{ speed.url }}</code>. Not part of the grade above.</p></div>
+    <div class="speed-cols">
+    {% for strat, label in (('mobile','Phone'),('desktop','Computer')) %}{% set r = speed.get(strat) %}{% if r %}
+      <div class="speed-col"><h3>{{ label }}</h3>
+        <ul class="rings">{% for c in r.scores %}<li class="ring {{ c.rating }}" style="--p: {{ c.score or 0 }}"><b>{{ c.score if c.score is not none else '–' }}</b><span>{{ c.label }}</span></li>{% endfor %}</ul>
+        <ul class="vitals">{% for v in r.vitals %}<li class="{{ v.rating }}"><span>{{ v.label }}</span><strong>{{ v.value }}</strong></li>{% endfor %}</ul>
+        {% if r.opportunities %}<p class="opp-h">Biggest savings</p><ul class="opps">{% for o in r.opportunities %}<li>{{ o.title }} <span>about {{ o.saving }}</span></li>{% endfor %}</ul>{% endif %}
+        {% if r.field %}<p class="field-note">Real Chrome users on this page: <strong>{{ r.field.category }}</strong>.</p>{% endif %}
+      </div>
+    {% endif %}{% endfor %}
+    </div>
+    <p class="speed-foot"><a href="{{ speed.report }}" rel="noopener" target="_blank">Open the full report on PageSpeed Insights</a></p>
+  </section>
+  {% endif %}
+
   {% if grouped %}
   <div class="filters" role="group" aria-label="Filter findings by type">
     <button type="button" class="filter" data-filter="all" aria-pressed="true">All <span class="n">{{ total }}</span></button>
