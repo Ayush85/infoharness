@@ -201,5 +201,10 @@ def test_pagespeed_parse_and_cdn_cgi_not_crawled():
     assert r["vitals"][0]["rating"] == "poor" and r["vitals"][1]["rating"] == "good"
     assert r["opportunities"][0]["saving"] == "1.4 s" and r["field"]["category"] == "average"
     assert speed.parse({}) is None
+    checks = speed.html_checks("<html><head><script src=a.js></script><script src=b.js></script><script src=c.js></script></head>"
+                               "<body><img src=x.png></body></html>", {}, "HTTP/1.1", 90000, 1900, 2)
+    by = {c["label"]: c["status"] for c in checks}
+    assert by["Render-blocking scripts"] == "poor" and by["Server response"] == "poor" and by["Redirects"] == "poor"
+    assert by["Mobile viewport"] == "poor" and by["HTTP version"] == "ok"
     from app.crawler import INFRA_PATH
     assert INFRA_PATH.match("/cdn-cgi/l/email-protection") and not INFRA_PATH.match("/docs/cdn-cgi/")

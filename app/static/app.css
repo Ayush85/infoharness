@@ -484,3 +484,12 @@ button.ghost:focus-visible { outline: 2px solid var(--focus, currentColor); outl
 .speed-foot { margin: 18px 0 0; font-size: .92rem; font-weight: 560; }
 @media (max-width: 760px) { .speed { padding: 20px 18px; } .speed-cols { grid-template-columns: 1fr; } }
 @media print { .speed-foot { display: none; } }
+
+.own-score { display: flex; align-items: center; gap: 14px; margin: 0 0 14px; --c: var(--ink-soft); }
+.own-score.good { --c: var(--ok); } .own-score.ok { --c: #b86e00; } .own-score.poor { --c: var(--pen); }
+.own-score b { display: grid; place-items: center; width: 64px; height: 64px; border-radius: 50%; font-size: 1.4rem; color: var(--c);
+  background: radial-gradient(closest-side, var(--sheet) 76%, transparent 78% 100%), conic-gradient(var(--c) calc(var(--p) * 1%), var(--line) 0); }
+.own-score p { margin: 0; font-weight: 640; } .own-score p span { display: block; font-weight: 400; color: var(--ink-soft); font-size: .86rem; }
+.fixes { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; font-size: .92rem; }
+.fixes li { padding-left: 12px; border-left: 3px solid var(--line-strong); } .fixes li.poor { border-left-color: var(--pen); } .fixes li.ok { border-left-color: #b86e00; }
+.g-h { font-size: 1rem; margin: 28px 0 0; padding-top: 20px; border-top: 1px solid var(--line); } .speed-col h4 { font-size: .95rem; margin: 14px 0 12px; }

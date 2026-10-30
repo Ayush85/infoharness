@@ -183,7 +183,7 @@ async def _run(url: str, prog: Progress, max_pages: int | None = None) -> tuple[
     findings += check_orphans(pages, crawl.start_url, partial=_is_partial(crawl))
     prog.set("saving report", 96, force=True)
     try:  # it ran while we crawled, so this usually returns at once
-        crawl.speed = await asyncio.wait_for(speed_task, timeout=45)
+        crawl.speed = await asyncio.wait_for(speed_task, timeout=70)
     except Exception:
         speed_task.cancel()
         crawl.speed = None

@@ -65,6 +65,7 @@ class Settings:
     # LLM judge: "none", "anthropic", or "openai" (OpenAI-compatible chat completions)
     llm_provider: str = field(default_factory=lambda: os.getenv("LLM_PROVIDER", "none").lower())
     pagespeed_enabled: bool = field(default_factory=lambda: os.getenv("PAGESPEED", "true").lower() != "false")
+    speed_browser: bool = field(default_factory=lambda: os.getenv("SPEED_BROWSER", "true").lower() != "false")
     pagespeed_api_key: str = field(default_factory=lambda: os.getenv("PAGESPEED_API_KEY", ""))
     pagespeed_timeout: float = field(default_factory=lambda: float(os.getenv("PAGESPEED_TIMEOUT", "75")))
     anthropic_api_key: str = field(default_factory=lambda: os.getenv("ANTHROPIC_API_KEY", ""))

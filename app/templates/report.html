@@ -92,18 +92,34 @@
   {% if speed %}
   <section class="speed" aria-labelledby="speed-h">
     <div class="speed-head"><h2 id="speed-h">Page speed</h2>
-      <p>Measured by Google PageSpeed Insights for <code>{{ speed.url }}</code>. Not part of the grade above.</p></div>
+      <p>Measured by infoharness for <code>{{ speed.url }}</code>. {% if speed.own and speed.own.browser %}We loaded the page in a real browser, once as a phone and once as a computer, from our server with no slowdown added, so slower real connections will see longer times.{% else %}This is a quick check of the page's server response and HTML. Not part of the grade above.{% endif %}</p></div>
+    {% if speed.own %}
     <div class="speed-cols">
-    {% for strat, label in (('mobile','Phone'),('desktop','Computer')) %}{% set r = speed.get(strat) %}{% if r %}
+    {% for strat, label in (('mobile','Phone'),('desktop','Computer')) %}{% set r = speed.own.get(strat) %}{% if r %}
       <div class="speed-col"><h3>{{ label }}</h3>
+        <div class="own-score {{ 'good' if r.score >= 90 else 'ok' if r.score >= 50 else 'poor' }}"><b style="--p: {{ r.score }}">{{ r.score }}</b>
+          <p>Speed score{% if r.stats and r.stats.requests %}<span>{{ r.stats.requests }} file{{ "" if r.stats.requests == 1 else "s" }}{% if r.stats.bytes %}, {{ r.stats.bytes }}{% endif %}</span>{% endif %}</p></div>
+        {% if r.vitals %}<ul class="vitals">{% for v in r.vitals %}<li class="{{ v.rating }}"><span>{{ v.label }}</span><strong>{{ v.value }}</strong></li>{% endfor %}</ul>{% endif %}
+        {% set todo = r.checks|rejectattr('status','equalto','good')|list %}
+        {% if todo %}<p class="opp-h">What to fix</p><ul class="fixes">{% for c in todo|sort(attribute='status', reverse=true) %}<li class="{{ c.status }}"><strong>{{ c.label }}.</strong> {{ c.detail }}</li>{% endfor %}</ul>{% endif %}
+        {% set okn = r.checks|selectattr('status','equalto','good')|list|length %}
+        {% if okn %}<p class="field-note">{{ okn }} other check{{ '' if okn == 1 else 's' }} passed.</p>{% endif %}
+      </div>
+    {% endif %}{% endfor %}
+    </div>
+    {% endif %}
+    {% if speed.google %}
+    <h3 class="g-h">Google PageSpeed Insights</h3>
+    <div class="speed-cols">
+    {% for strat, label in (('mobile','Phone'),('desktop','Computer')) %}{% set r = speed.google.get(strat) %}{% if r %}
+      <div class="speed-col"><h4>{{ label }}</h4>
         <ul class="rings">{% for c in r.scores %}<li class="ring {{ c.rating }}" style="--p: {{ c.score or 0 }}"><b>{{ c.score if c.score is not none else '–' }}</b><span>{{ c.label }}</span></li>{% endfor %}</ul>
-        <ul class="vitals">{% for v in r.vitals %}<li class="{{ v.rating }}"><span>{{ v.label }}</span><strong>{{ v.value }}</strong></li>{% endfor %}</ul>
-        {% if r.opportunities %}<p class="opp-h">Biggest savings</p><ul class="opps">{% for o in r.opportunities %}<li>{{ o.title }} <span>about {{ o.saving }}</span></li>{% endfor %}</ul>{% endif %}
         {% if r.field %}<p class="field-note">Real Chrome users on this page: <strong>{{ r.field.category }}</strong>.</p>{% endif %}
       </div>
     {% endif %}{% endfor %}
     </div>
-    <p class="speed-foot"><a href="{{ speed.report }}" rel="noopener" target="_blank">Open the full report on PageSpeed Insights</a></p>
+    <p class="speed-foot"><a href="{{ speed.google.report }}" rel="noopener" target="_blank">Open the full report on PageSpeed Insights</a></p>
+    {% endif %}
   </section>
   {% endif %}
 
